@@ -1,0 +1,152 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-user-circle fa-5x text-secondary mb-3"></i>
+                <h4 class="card-title">{{ student.full_name() }}</h4>
+                <p class="text-muted">{{ student.student_id }}</p>
+                
+                <div class="d-grid gap-2">
+                    {% if risk.risk_level == 'High' %}
+                        <div class="alert alert-danger">Risk Level: HIGH</div>
+                    {% elif risk.risk_level == 'Medium' %}
+                        <div class="alert alert-warning">Risk Level: MEDIUM</div>
+                    {% else %}
+                        <div class="alert alert-success">Risk Level: LOW</div>
+                    {% endif %}
+                </div>
+
+                <ul class="list-group list-group-flush text-start mt-3">
+                    <li class="list-group-item"><strong>Email:</strong> {{ student.email }}</li>
+                    <li class="list-group-item"><strong>Phone:</strong> {{ student.phone }}</li>
+                    <li class="list-group-item"><strong>Grade:</strong> {{ student.grade_level }}</li>
+                    <li class="list-group-item"><strong>Attendance Factor:</strong> {{ risk.attendance_factor }} (Lower is better)</li>
+                    <li class="list-group-item"><strong>Academic Factor:</strong> {{ risk.academic_factor }} (Lower is better)</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm mt-3">
+            <div class="card-header bg-primary text-white">
+                Add Intervention
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('main.add_intervention', id=student.id) }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Type</label>
+                        <select class="form-select" name="type">
+                            <option>Counseling Session</option>
+                            <option>Parent Meeting</option>
+                            <option>Remedial Class</option>
+                            <option>Behavioral Check</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" name="notes" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Log Intervention</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="academic-tab" data-bs-toggle="tab" data-bs-target="#academic" type="button" role="tab">Academic</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendance" type="button" role="tab">Attendance</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="intervention-tab" data-bs-toggle="tab" data-bs-target="#intervention" type="button" role="tab">Interventions</button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="myTabContent">
+                    <div class="tab-pane fade show active" id="academic" role="tabpanel">
+                        <h5 class="card-title">Academic Performance</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Subject</th>
+                                        <th>Exam Type</th>
+                                        <th>Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in grades %}
+                                    <tr>
+                                        <td>{{ record.date.strftime('%Y-%m-%d') }}</td>
+                                        <td>{{ record.subject }}</td>
+                                        <td>{{ record.exam_type }}</td>
+                                        <td>
+                                            {% set pct = (record.score / record.max_score) * 100 %}
+                                            <span class="badge {% if pct < 50 %}bg-danger{% elif pct < 70 %}bg-warning{% else %}bg-success{% endif %}">
+                                                {{ record.score }} / {{ record.max_score }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="attendance" role="tabpanel">
+                        <h5 class="card-title">Attendance History</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for att in attendance %}
+                                    <tr>
+                                        <td>{{ att.date.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            {% if att.status == 'Present' %}
+                                                <span class="text-success fw-bold">Present</span>
+                                            {% elif att.status == 'Late' %}
+                                                <span class="text-warning fw-bold">Late</span>
+                                            {% else %}
+                                                <span class="text-danger fw-bold">Absent</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="intervention" role="tabpanel">
+                        <h5 class="card-title">Intervention History</h5>
+                        {% for int in interventions %}
+                        <div class="card mb-2">
+                            <div class="card-body p-2">
+                                <h6 class="card-subtitle mb-2 text-muted">{{ int.date.strftime('%Y-%m-%d') }} - {{ int.type }}</h6>
+                                <p class="card-text">{{ int.notes }}</p>
+                                <span class="badge bg-info">{{ int.status }}</span>
+                            </div>
+                        </div>
+                        {% else %}
+                            <p>No interventions recorded.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
