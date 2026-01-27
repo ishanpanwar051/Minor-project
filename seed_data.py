@@ -15,7 +15,8 @@ def seed_database():
         db.create_all()
         
         print("Creating Admin User...")
-        admin = User(username='admin', email='admin@school.edu', password_hash='password', role='admin')
+        admin = User(username='admin', email='admin@school.edu', role='admin')
+        admin.set_password('password')
         db.session.add(admin)
         
         print("Creating Students...")

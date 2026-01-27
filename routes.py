@@ -20,10 +20,7 @@ def login():
         
         user = User.query.filter_by(email=email).first()
         
-        # Simple check (In production, use werkzeug.security.check_password_hash)
-        # For this demo, assuming seeded users have raw passwords or handle hash in seed
-        # We will assume check_password_hash is used if password_hash is set
-        if not user or user.password_hash != password: 
+        if not user or not user.check_password(password):
             flash('Please check your login details and try again.', 'danger')
             return redirect(url_for('auth.login'))
             
