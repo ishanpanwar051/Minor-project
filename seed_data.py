@@ -15,21 +15,40 @@ def seed_database():
         db.create_all()
         
         print("Creating Admin User...")
-        admin = User(username='admin', email='admin@school.edu', role='admin')
+        admin = User(username='admin', email='admin@college.edu', role='admin')
         admin.set_password('password')
         db.session.add(admin)
+
+        print("Creating Faculty User...")
+        faculty = User(username='faculty', email='faculty@college.edu', role='faculty')
+        faculty.set_password('password')
+        db.session.add(faculty)
         
         print("Creating Students...")
         students = []
-        for i in range(50):
+        
+        # Create a specific demo student for the user
+        demo_student = Student(
+            student_id="STD2024999",
+            first_name="Ishan",
+            last_name="Demo",
+            email="ishan@gmail.com",
+            phone="123-456-7890",
+            semester=6,
+            enrollment_date=datetime.now() - timedelta(days=365*2)
+        )
+        students.append(demo_student)
+        db.session.add(demo_student)
+
+        for i in range(49):
             student = Student(
                 student_id=f"STD{2024000 + i}",
                 first_name=fake.first_name(),
                 last_name=fake.last_name(),
                 email=fake.email(),
                 phone=fake.phone_number(),
-                grade_level=random.randint(9, 12),
-                enrollment_date=fake.date_between(start_date='-2y', end_date='-1y')
+                semester=random.randint(1, 8),
+                enrollment_date=fake.date_between(start_date='-3y', end_date='-1y')
             )
             students.append(student)
             db.session.add(student)
@@ -37,8 +56,26 @@ def seed_database():
         db.session.commit()
         
         print("Generating Attendance & Academic Records...")
-        subjects = ['Math', 'Science', 'English', 'History', 'CS']
+        subjects = ['Data Structures', 'Algorithms', 'Database', 'Operating Systems', 'Networks']
         
+        # Create User accounts for first 5 students for testing
+        print("Creating User accounts for students...")
+        # Ensure Ishan has a login
+        ishan_user = User(username='ishan_demo', email='ishan@gmail.com', role='student')
+        ishan_user.set_password('password')
+        db.session.add(ishan_user)
+        print("  Created User for Student: Ishan (ishan@gmail.com) / password")
+
+        for i, student in enumerate(students[1:6]):
+            user = User(
+                username=student.student_id, 
+                email=student.email, 
+                role='student'
+            )
+            user.set_password('password')
+            db.session.add(user)
+            print(f"  Created User for Student: {student.first_name} ({student.email}) / password")
+
         for student in students:
             # Simulate different profiles:
             # 1. Good Student (High Att, High Grades)

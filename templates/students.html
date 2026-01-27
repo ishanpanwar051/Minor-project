@@ -23,7 +23,7 @@
             <tr>
                 <th>ID</th>
                 <th>Name</th>
-                <th>Grade</th>
+                <th>Semester</th>
                 <th>Risk Level</th>
                 <th>Risk Score</th>
                 <th>Action</th>
@@ -41,7 +41,7 @@
                         </div>
                     </div>
                 </td>
-                <td>{{ student.grade_level }}</td>
+                <td>{{ student.semester }}</td>
                 <td>
                     {% if student.risk_profile.risk_level == 'High' %}
                         <span class="badge bg-danger rounded-pill">High</span>

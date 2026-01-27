@@ -59,6 +59,26 @@ The project is a solid "Minor Project" level application. It successfully demons
 
 ---
 
+## 🚀 Deployment Strategy (Scaling for Multiple Users)
+
+### 1. Database Migration
+Current (Dev): **SQLite** (Single file, low concurrency)
+Production: **PostgreSQL** or **MySQL**
+- **Why?** SQLite locks the entire database during write operations, causing bottlenecks. PostgreSQL supports row-level locking, allowing thousands of concurrent transactions.
+- **Action:** Update `SQLALCHEMY_DATABASE_URI` in `config.py`.
+
+### 2. WSGI Server
+Current (Dev): **Flask Development Server** (Single-threaded)
+Production: **Gunicorn** or **uWSGI**
+- **Why?** Flask's built-in server processes one request at a time. Gunicorn uses "workers" to handle multiple requests in parallel.
+- **Command:** `gunicorn -w 4 -b 0.0.0.0:8000 app:app` (Spawns 4 worker processes).
+
+### 3. Load Balancing
+- **Tool:** Nginx
+- **Role:** sits in front of Gunicorn to handle static files (CSS/JS) efficiently and route traffic to available application workers.
+
+---
+
 ## 3. Future Scope: Machine Learning Integration
 *How to evolve from "Rule-Based" to "AI-Based".*
 

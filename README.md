@@ -16,7 +16,23 @@ EduGuard is an intelligent, data-driven web application designed to reduce stude
 - **Frontend:** HTML5, Bootstrap 5, Jinja2
 - **Visualization:** Chart.js
 
-## Project Structure
+## 🔐 Authentication & User Management
+The system uses a **Closed Registration** model for security (typical for internal college/university systems).
+
+### 1. How Users Get Access
+Users **cannot** sign up themselves. An **Admin** must create accounts for them.
+1.  Log in as Admin (`admin@college.edu` / `password`).
+2.  Go to **Create User** (in the sidebar).
+3.  Enter the user's details and assign a role (`faculty`, `student`, `admin`).
+
+### 2. Login Logic
+- **Faculty/Admins:** Log in with their credentials to access the main dashboard.
+- **Students:** 
+  - Must have a User account created with the **same email** as their Student record.
+  - Upon login, they are redirected to their personal `My Profile` page.
+- **Unregistered Users:** If an email/password is not in the database, login is **denied** with an error message.
+
+## 🛠 Project Structure
 ```
 /student-dropout-prevention
   ├── app.py                 # Main application entry point
@@ -53,7 +69,7 @@ EduGuard is an intelligent, data-driven web application designed to reduce stude
    Open your browser and go to: `http://127.0.0.1:5000`
    
    **Login Credentials:**
-   - Email: `admin@school.edu`
+   - Email: `admin@college.edu`
    - Password: `password`
 
 ## Risk Calculation Logic (Viva Explanation)

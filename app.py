@@ -10,6 +10,12 @@ def create_app():
     # Initialize extensions
     db.init_app(app)
     
+    # Initialize Flask-Mail
+    from flask_mail import Mail
+    mail = Mail()
+    mail.init_app(app)
+    
+    # Initialize Flask-Login
     login_manager = LoginManager()
     login_manager.login_view = 'auth.login'
     login_manager.init_app(app)
