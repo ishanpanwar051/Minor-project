@@ -6,7 +6,7 @@
     <div class="col-md-3">
         <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded">
             <div>
-                <h3 class="fs-2">{{ total_students }}</h3>
+                <h3 class="fs-2">{{ total_students or 0 }}</h3>
                 <p class="fs-5">Total Students</p>
             </div>
             <i class="fas fa-users fs-1 primary-text border rounded-full secondary-bg p-3"></i>
@@ -16,7 +16,7 @@
     <div class="col-md-3">
         <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded">
             <div>
-                <h3 class="fs-2 text-danger">{{ high_risk_count }}</h3>
+                <h3 class="fs-2 text-danger">{{ high_risk_count or 0 }}</h3>
                 <p class="fs-5">High Risk</p>
             </div>
             <i class="fas fa-exclamation-triangle fs-1 text-danger border rounded-full secondary-bg p-3"></i>
@@ -26,7 +26,7 @@
     <div class="col-md-3">
         <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded">
             <div>
-                <h3 class="fs-2 text-warning">{{ medium_risk_count }}</h3>
+                <h3 class="fs-2 text-warning">{{ medium_risk_count or 0 }}</h3>
                 <p class="fs-5">Medium Risk</p>
             </div>
             <i class="fas fa-exclamation-circle fs-1 text-warning border rounded-full secondary-bg p-3"></i>
@@ -36,8 +36,8 @@
     <div class="col-md-3">
         <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded">
             <div>
-                <h3 class="fs-2 text-success">95%</h3>
-                <p class="fs-5">Avg Attendance</p>
+                <h3 class="fs-2 text-success">{{ (total_students or 0) - (high_risk_count or 0) - (medium_risk_count or 0) }}</h3>
+                <p class="fs-5">Low Risk</p>
             </div>
             <i class="fas fa-chart-line fs-1 text-success border rounded-full secondary-bg p-3"></i>
         </div>
@@ -48,7 +48,7 @@
     <div class="col-lg-8">
         <h3 class="fs-4 mb-3">Risk Overview</h3>
         <div class="bg-white p-4 rounded shadow-sm">
-            <canvas id="riskChart"></canvas>
+            <canvas id="riskChart" width="400" height="200"></canvas>
         </div>
     </div>
     <div class="col-lg-4">
@@ -58,11 +58,11 @@
                 {% for int in recent_interventions %}
                 <a href="{{ url_for('main.student_detail', id=int.student_id) }}" class="list-group-item list-group-item-action">
                     <div class="d-flex w-100 justify-content-between">
-                        <h5 class="mb-1">{{ int.type }}</h5>
-                        <small>{{ int.date.strftime('%Y-%m-%d') }}</small>
+                        <h5 class="mb-1">{{ int.type or 'Intervention' }}</h5>
+                        <small>{{ int.date.strftime('%Y-%m-%d') if int.date else 'No date' }}</small>
                     </div>
-                    <p class="mb-1 text-truncate">{{ int.notes }}</p>
-                    <small>Student ID: {{ int.student.student_id }}</small>
+                    <p class="mb-1 text-truncate">{{ int.notes or 'No notes available' }}</p>
+                    <small>Student ID: {{ int.student.student_id if int.student else 'Unknown' }}</small>
                 </a>
                 {% else %}
                 <p class="text-muted">No recent interventions.</p>
@@ -76,33 +76,44 @@
 
 {% block scripts %}
 <script>
-    var ctx = document.getElementById('riskChart').getContext('2d');
-    var myChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['High Risk', 'Medium Risk', 'Low Risk'],
-            datasets: [{
-                label: '# of Students',
-                data: [{{ high_risk_count }}, {{ medium_risk_count }}, {{ total_students - high_risk_count - medium_risk_count }}],
-                backgroundColor: [
-                    'rgba(220, 53, 69, 0.8)',
-                    'rgba(255, 193, 7, 0.8)',
-                    'rgba(25, 135, 84, 0.8)'
-                ],
-                borderColor: [
-                    'rgba(220, 53, 69, 1)',
-                    'rgba(255, 193, 7, 1)',
-                    'rgba(25, 135, 84, 1)'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true
+    // Wait for DOM to be ready
+    document.addEventListener('DOMContentLoaded', function() {
+        var ctx = document.getElementById('riskChart');
+        if (ctx) {
+            var highRisk = {{ high_risk_count or 0 }};
+            var mediumRisk = {{ medium_risk_count or 0 }};
+            var totalStudents = {{ total_students or 0 }};
+            var lowRisk = totalStudents - highRisk - mediumRisk;
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['High Risk', 'Medium Risk', 'Low Risk'],
+                    datasets: [{
+                        label: '# of Students',
+                        data: [highRisk, mediumRisk, lowRisk],
+                        backgroundColor: [
+                            'rgba(220, 53, 69, 0.8)',
+                            'rgba(255, 193, 7, 0.8)',
+                            'rgba(25, 135, 84, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(220, 53, 69, 1)',
+                            'rgba(255, 193, 7, 1)',
+                            'rgba(25, 135, 84, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
                 }
-            }
+            });
         }
     });
 </script>

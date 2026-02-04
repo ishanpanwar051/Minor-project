@@ -1,78 +1,156 @@
 {% extends "layout.html" %}
 
+{% block title %}Analytics - EduGuard{% endblock %}
+
 {% block content %}
-<h1 class="h2 mb-4">Analytics & Reports</h1>
-
-<div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-white fw-bold">Risk Distribution</div>
-            <div class="card-body">
-                <canvas id="riskPieChart"></canvas>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Analytics Dashboard</h2>
+        <div>
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+    
+    <!-- Risk Distribution -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Risk Distribution
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="riskChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Risk Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>High Risk Students</span>
+                            <span class="badge bg-danger">{{ risk_counts.High }}</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Medium Risk Students</span>
+                            <span class="badge bg-warning">{{ risk_counts.Medium }}</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Low Risk Students</span>
+                            <span class="badge bg-success">{{ risk_counts.Low }}</span>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong>Total Students</strong>
+                            <strong>{{ risk_counts.High + risk_counts.Medium + risk_counts.Low }}</strong>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-white fw-bold">Performance vs Attendance Trend (Sample)</div>
-            <div class="card-body">
-                <canvas id="trendChart"></canvas>
+    
+    <!-- Additional Analytics -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Key Metrics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <h3 class="text-danger">{{ risk_counts.High }}</h3>
+                                <p class="mb-0">Require Immediate Attention</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <h3 class="text-warning">{{ risk_counts.Medium }}</h3>
+                                <p class="mb-0">Need Monitoring</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <h3 class="text-success">{{ risk_counts.Low }}</h3>
+                                <p class="mb-0">On Track</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <h3 class="text-primary">
+                                    {% if risk_counts.High + risk_counts.Medium + risk_counts.Low > 0 %}
+                                        {{ "%.1f"|format((risk_counts.High / (risk_counts.High + risk_counts.Medium + risk_counts.Low)) * 100) }}%
+                                    {% else %}
+                                        0%
+                                    {% endif %}
+                                </h3>
+                                <p class="mb-0">High Risk Percentage</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
-<div class="row">
-    <div class="col-12">
-        <div class="card shadow-sm">
-            <div class="card-header bg-white fw-bold">Summary Report</div>
-            <div class="card-body">
-                <p>This report highlights the current status of student retention efforts.</p>
-                <ul>
-                    <li><strong>Total High Risk Students:</strong> {{ risk_counts['High'] }}</li>
-                    <li><strong>Total Medium Risk Students:</strong> {{ risk_counts['Medium'] }}</li>
-                    <li><strong>Total Low Risk Students:</strong> {{ risk_counts['Low'] }}</li>
-                </ul>
-                <button class="btn btn-secondary" onclick="window.print()">Print Report</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Pie Chart
-    var ctxPie = document.getElementById('riskPieChart').getContext('2d');
-    new Chart(ctxPie, {
-        type: 'doughnut',
-        data: {
-            labels: ['High Risk', 'Medium Risk', 'Low Risk'],
-            datasets: [{
-                data: [{{ risk_counts['High'] }}, {{ risk_counts['Medium'] }}, {{ risk_counts['Low'] }}],
-                backgroundColor: ['#dc3545', '#ffc107', '#198754']
-            }]
-        }
-    });
-
-    // Trend Chart (Dummy Data for visual)
-    var ctxTrend = document.getElementById('trendChart').getContext('2d');
-    new Chart(ctxTrend, {
-        type: 'line',
-        data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            datasets: [{
-                label: 'Avg Attendance %',
-                data: [95, 93, 90, 88, 85, 82],
-                borderColor: '#0d6efd',
-                tension: 0.1
-            }, {
-                label: 'Avg Grade %',
-                data: [70, 72, 68, 65, 60, 58],
-                borderColor: '#6610f2',
-                tension: 0.1
-            }]
+    document.addEventListener('DOMContentLoaded', function() {
+        var ctx = document.getElementById('riskChart');
+        if (ctx) {
+            var highRisk = {{ risk_counts.High or 0 }};
+            var mediumRisk = {{ risk_counts.Medium or 0 }};
+            var lowRisk = {{ risk_counts.Low or 0 }};
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['High Risk', 'Medium Risk', 'Low Risk'],
+                    datasets: [{
+                        data: [highRisk, mediumRisk, lowRisk],
+                        backgroundColor: [
+                            'rgba(220, 53, 69, 0.8)',
+                            'rgba(255, 193, 7, 0.8)',
+                            'rgba(25, 135, 84, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(220, 53, 69, 1)',
+                            'rgba(255, 193, 7, 1)',
+                            'rgba(25, 135, 84, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
         }
     });
 </script>

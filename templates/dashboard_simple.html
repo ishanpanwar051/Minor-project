@@ -1,0 +1,77 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2>Dashboard</h2>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Students</h5>
+                    <h3>{{ total_students or 0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">High Risk</h5>
+                    <h3>{{ high_risk_count or 0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Medium Risk</h5>
+                    <h3>{{ medium_risk_count or 0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Low Risk</h5>
+                    <h3>{{ (total_students or 0) - (high_risk_count or 0) - (medium_risk_count or 0) }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Recent Interventions</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_interventions %}
+                        {% for int in recent_interventions %}
+                            <div class="border-bottom pb-2 mb-2">
+                                <strong>{{ int.type or 'Intervention' }}</strong><br>
+                                <small>Date: {{ int.date.strftime('%Y-%m-%d') if int.date else 'No date' }}</small><br>
+                                <small>{{ int.notes or 'No notes' }}</small>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No recent interventions found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>System Status</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Application:</strong> Running</p>
+                    <p><strong>Database:</strong> Connected</p>
+                    <p><strong>User:</strong> {{ current_user.username }}</p>
+                    <p><strong>Role:</strong> {{ current_user.role }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

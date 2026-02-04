@@ -29,6 +29,7 @@ class Student(db.Model):
     phone = db.Column(db.String(20))
     semester = db.Column(db.Integer, nullable=False)
     enrollment_date = db.Column(db.Date, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     
     # Relationships
     attendance_records = db.relationship('Attendance', backref='student', lazy=True)
@@ -70,3 +71,6 @@ class RiskProfile(db.Model):
     last_updated = db.Column(db.DateTime, default=datetime.utcnow)
     attendance_factor = db.Column(db.Float) # Contribution of attendance to risk
     academic_factor = db.Column(db.Float) # Contribution of grades to risk
+    engagement_score = db.Column(db.Float, default=50.0) # LMS engagement score
+    average_score = db.Column(db.Float, default=75.0) # Average academic score
+    attendance_rate = db.Column(db.Float, default=85.0) # Attendance percentage
