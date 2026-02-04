@@ -25,15 +25,19 @@ def create_app():
         return User.query.get(int(user_id))
 
     # Register Blueprints
-    from routes.main_fixed import main_bp as main_blueprint
+    from routes.main_new import main_bp as main_blueprint
     from routes.auth_fixed import auth_bp as auth_blueprint
     
     app.register_blueprint(main_blueprint)
     app.register_blueprint(auth_blueprint)
 
-    # Create DB Tables
+    # Create DB Tables if they don't exist
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+            print("✅ Database tables created successfully")
+        except Exception as e:
+            print(f"❌ Error creating database tables: {e}")
 
     return app
 

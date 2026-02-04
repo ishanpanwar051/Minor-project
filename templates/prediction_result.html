@@ -1,0 +1,291 @@
+{% extends "layout.html" %}
+
+{% block title %}Prediction Result - EduGuard{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Risk Prediction Results</h2>
+        <div>
+            <a href="{{ url_for('main.predict') }}" class="btn btn-secondary me-2">
+                <i class="fas fa-arrow-left me-2"></i>New Analysis
+            </a>
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">
+                <i class="fas fa-home me-2"></i>Dashboard
+            </a>
+        </div>
+    </div>
+    
+    <!-- Student Info -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-graduate me-2"></i>{{ student.full_name() }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <p><strong>Student ID:</strong> {{ student.student_id }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Email:</strong> {{ student.email or 'N/A' }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Semester:</strong> {{ student.semester }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Enrollment:</strong> {{ student.enrollment_date.strftime('%Y-%m-%d') if student.enrollment_date else 'N/A' }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Analysis -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Risk Assessment
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <div class="risk-score-display">
+                            <h1 class="{% if prediction.risk_level == 'Critical' %}text-danger{% elif prediction.risk_level == 'High' %}text-warning{% elif prediction.risk_level == 'Medium' %}text-info{% else %}text-success{% endif %}">
+                                {{ "%.1f"|format(prediction.risk_score) }}%
+                            </h1>
+                            <span class="badge {% if prediction.risk_level == 'Critical' %}bg-danger{% elif prediction.risk_level == 'High' %}bg-warning{% elif prediction.risk_level == 'Medium' %}bg-info{% else %}bg-success{% endif %} badge-lg">
+                                {{ prediction.risk_level }} Risk
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <canvas id="riskFactorsChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Performance Metrics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="metric-item">
+                                <h4 class="text-info">{{ "%.1f"|format(prediction.attendance_rate) }}%</h4>
+                                <small class="text-muted">Attendance Rate</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="metric-item">
+                                <h4 class="text-primary">{{ "%.1f"|format(prediction.average_score) }}</h4>
+                                <small class="text-muted">Average Score</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-item">
+                                <h4 class="text-warning">{{ prediction.intervention_count }}</h4>
+                                <small class="text-muted">Interventions</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-item">
+                                <h4 class="text-secondary">{{ student.semester }}</h4>
+                                <small class="text-muted">Current Semester</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Factors Breakdown -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-microscope me-2"></i>Risk Factors Analysis
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="factor-card">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6>Attendance Factor</h6>
+                                    <span class="badge bg-warning">{{ "%.1f"|format(prediction.factors.attendance) }}%</span>
+                                </div>
+                                <div class="progress mt-2">
+                                    <div class="progress-bar bg-warning" style="width: {{ prediction.factors.attendance }}%"></div>
+                                </div>
+                                <small class="text-muted">Based on attendance patterns</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="factor-card">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6>Academic Factor</h6>
+                                    <span class="badge bg-info">{{ "%.1f"|format(prediction.factors.academic) }}%</span>
+                                </div>
+                                <div class="progress mt-2">
+                                    <div class="progress-bar bg-info" style="width: {{ prediction.factors.academic }}%"></div>
+                                </div>
+                                <small class="text-muted">Based on academic performance</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="factor-card">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6>Intervention Factor</h6>
+                                    <span class="badge bg-secondary">{{ "%.1f"|format(prediction.factors.intervention) }}%</span>
+                                </div>
+                                <div class="progress mt-2">
+                                    <div class="progress-bar bg-secondary" style="width: {{ prediction.factors.intervention }}%"></div>
+                                </div>
+                                <small class="text-muted">Based on intervention history</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recommendations -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>Recommendations
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if prediction.recommendations %}
+                        <div class="row">
+                            {% for recommendation in prediction.recommendations %}
+                            <div class="col-md-6 mb-3">
+                                <div class="recommendation-item">
+                                    <div class="d-flex">
+                                        <i class="fas fa-check-circle text-success me-3 mt-1"></i>
+                                        <p class="mb-0">{{ recommendation }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No specific recommendations available at this time.</p>
+                    {% endif %}
+                    
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6><i class="fas fa-info-circle me-2"></i>Next Steps</h6>
+                        <ul class="mb-0">
+                            <li>Schedule a meeting with the student to discuss concerns</li>
+                            <li>Review the student's recent academic performance</li>
+                            <li>Consider additional academic support if needed</li>
+                            <li>Monitor progress regularly and update intervention plan</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Risk Factors Chart
+    var ctx = document.getElementById('riskFactorsChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Attendance', 'Academic', 'Intervention'],
+                datasets: [{
+                    data: [
+                        {{ prediction.factors.attendance }},
+                        {{ prediction.factors.academic }},
+                        {{ prediction.factors.intervention }}
+                    ],
+                    backgroundColor: [
+                        'rgba(255, 193, 7, 0.8)',
+                        'rgba(23, 162, 184, 0.8)',
+                        'rgba(108, 117, 125, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 193, 7, 1)',
+                        'rgba(23, 162, 184, 1)',
+                        'rgba(108, 117, 125, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + context.parsed + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.risk-score-display h1 {
+    font-size: 4rem;
+    font-weight: bold;
+}
+
+.badge-lg {
+    font-size: 1.2rem;
+    padding: 0.5rem 1rem;
+}
+
+.factor-card {
+    padding: 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    background: #f8f9fa;
+}
+
+.recommendation-item {
+    padding: 1rem;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    background: white;
+}
+
+.metric-item h4 {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}

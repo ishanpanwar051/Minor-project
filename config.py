@@ -3,8 +3,10 @@ from datetime import timedelta
 
 class Config:
     """Base configuration"""
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///dropout_prevention.db'
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'eduguard-secret-key-change-in-production'
+    
+    # Single SQLite database file
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///eduguard.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Flask-Mail Configuration
@@ -31,11 +33,18 @@ class Config:
     
     # Pagination
     ITEMS_PER_PAGE = 20
+    
+    # Database configuration
+    DATABASE_NAME = 'eduguard.db'
+    DATABASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), DATABASE_NAME)
 
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
     TESTING = False
+    
+    # Use absolute path for development
+    SQLALCHEMY_DATABASE_URI = f'sqlite:///{Config.DATABASE_PATH}'
 
 class ProductionConfig(Config):
     """Production configuration"""
@@ -46,6 +55,9 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+    
+    # Use environment variable for production
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or f'sqlite:///{Config.DATABASE_PATH}'
 
 class TestingConfig(Config):
     """Testing configuration"""

@@ -31,19 +31,14 @@ class Student(db.Model):
     __tablename__ = 'students'
     
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.String(20), unique=True, nullable=False)  # College ID/Roll number
+    student_id = db.Column(db.String(20), unique=True, nullable=False)  # Roll number
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(120))
     phone = db.Column(db.String(20))
-    year = db.Column(db.Integer, nullable=False)  # 1st year, 2nd year, 3rd year, 4th year
-    semester = db.Column(db.Integer, nullable=False)  # 1-8 semesters
-    department = db.Column(db.String(100))  # Computer Science, Engineering, Business, etc.
-    program = db.Column(db.String(100))  # B.Tech, B.Sc, B.Com, etc.
+    semester = db.Column(db.Integer, nullable=False)
     enrollment_date = db.Column(db.Date, default=date.today)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    gpa = db.Column(db.Float, default=0.0)  # Cumulative GPA
-    credits_completed = db.Column(db.Integer, default=0)  # Total credits earned
     
     # Relationships
     attendance_records = db.relationship('Attendance', backref='student', lazy=True, cascade='all, delete-orphan')
@@ -53,17 +48,6 @@ class Student(db.Model):
 
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
-    
-    def academic_standing(self):
-        """Calculate academic standing based on GPA"""
-        if self.gpa >= 3.5:
-            return "Excellent"
-        elif self.gpa >= 3.0:
-            return "Good"
-        elif self.gpa >= 2.0:
-            return "Satisfactory"
-        else:
-            return "At Risk"
 
     def __repr__(self):
         return f'<Student {self.student_id}>'
@@ -88,33 +72,21 @@ class AcademicRecord(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
-    course_code = db.Column(db.String(20), nullable=False)  # CS101, MATH201, etc.
-    course_name = db.Column(db.String(100), nullable=False)  # Introduction to Programming
-    credits = db.Column(db.Float, default=3.0)  # Credit hours
-    grade = db.Column(db.String(2))  # A, B, C, D, F
-    grade_points = db.Column(db.Float, default=0.0)  # 4.0, 3.0, 2.0, 1.0, 0.0
-    semester = db.Column(db.Integer, nullable=False)
-    academic_year = db.Column(db.String(9))  # 2023-2024
+    subject = db.Column(db.String(50), nullable=False)
+    score = db.Column(db.Float, nullable=False)
+    max_score = db.Column(db.Float, default=100.0)
+    exam_type = db.Column(db.String(50))  # Midterm, Final, Quiz, Assignment
     exam_date = db.Column(db.Date, default=date.today)
+    semester = db.Column(db.Integer)
     notes = db.Column(db.Text)
     
-    def calculate_grade_points(self):
-        """Convert letter grade to grade points"""
-        grade_mapping = {
-            'A': 4.0, 'A-': 3.7,
-            'B+': 3.3, 'B': 3.0, 'B-': 2.7,
-            'C+': 2.3, 'C': 2.0, 'C-': 1.7,
-            'D+': 1.3, 'D': 1.0,
-            'F': 0.0
-        }
-        return grade_mapping.get(self.grade, 0.0)
-    
-    def quality_points(self):
-        """Calculate quality points (grade points × credits)"""
-        return self.calculate_grade_points() * self.credits
+    def percentage(self):
+        if self.max_score > 0:
+            return (self.score / self.max_score) * 100
+        return 0
 
     def __repr__(self):
-        return f'<AcademicRecord {self.student_id} - {self.course_code}: {self.grade}>'
+        return f'<AcademicRecord {self.student_id} - {self.subject}: {self.score}>'
 
 class Intervention(db.Model):
     __tablename__ = 'interventions'
@@ -122,10 +94,10 @@ class Intervention(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
     date = db.Column(db.Date, default=date.today)
-    type = db.Column(db.String(50))  # Academic Counseling, Mental Health Support, Tutoring, Financial Aid, Career Guidance
+    type = db.Column(db.String(50))  # Counseling, Parent Meeting, Remedial Class, Academic Support
     status = db.Column(db.String(20), default='Open')  # Open, In Progress, Resolved, Cancelled
     notes = db.Column(db.Text)
-    assigned_to = db.Column(db.String(100))  # Counselor, Professor, Advisor, Staff
+    assigned_to = db.Column(db.String(100))  # Staff member responsible
     follow_up_date = db.Column(db.Date)
     outcome = db.Column(db.Text)  # Results of the intervention
 

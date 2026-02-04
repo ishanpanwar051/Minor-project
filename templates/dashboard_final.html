@@ -1,0 +1,327 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard - EduGuard{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Dashboard</h2>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary" onclick="refreshDashboard()">
+                <i class="fas fa-sync-alt me-2"></i>Refresh
+            </button>
+            {% if current_user.role == 'admin' %}
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>Add User
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-number text-primary">{{ total_students or 0 }}</div>
+                <div class="kpi-label">Total Students</div>
+                <div class="kpi-icon">
+                    <i class="fas fa-users fa-2x text-primary"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-number text-danger">{{ high_risk_count or 0 }}</div>
+                <div class="kpi-label">High/Critical Risk</div>
+                <div class="kpi-icon">
+                    <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-number text-warning">{{ medium_risk_count or 0 }}</div>
+                <div class="kpi-label">Medium Risk</div>
+                <div class="kpi-icon">
+                    <i class="fas fa-exclamation-circle fa-2x text-warning"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-number text-success">{{ low_risk_count or 0 }}</div>
+                <div class="kpi-label">Low Risk</div>
+                <div class="kpi-icon">
+                    <i class="fas fa-check-circle fa-2x text-success"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts and Analytics -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Risk Distribution
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="riskChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Quick Stats
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="stat-item">
+                                <h4 class="text-info">{{ "%.1f"|format(attendance_stats.attendance_rate or 0) }}%</h4>
+                                <small class="text-muted">Avg Attendance</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="stat-item">
+                                <h4 class="text-primary">{{ "%.1f"|format(academic_stats.average_score or 0) }}</h4>
+                                <small class="text-muted">Avg Score</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <h4 class="text-warning">{{ attendance_stats.total_classes or 0 }}</h4>
+                                <small class="text-muted">Total Classes</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <h4 class="text-danger">{{ academic_stats.failing_count or 0 }}</h4>
+                                <small class="text-muted">Failing Grades</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activities -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Recent Interventions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_interventions %}
+                        {% for intervention in recent_interventions %}
+                        <div class="activity-item border-bottom pb-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ intervention.type or 'General Intervention' }}</h6>
+                                    <small class="text-muted">
+                                        {{ intervention.student.full_name() if intervention.student else 'Unknown Student' }}
+                                        • {{ intervention.date.strftime('%b %d, %Y') if intervention.date else 'No date' }}
+                                    </small>
+                                    {% if intervention.notes %}
+                                    <p class="mb-0 small text-muted mt-1">{{ intervention.notes[:50] }}{% if intervention.notes|length > 50 %}...{% endif %}</p>
+                                    {% endif %}
+                                </div>
+                                <div class="ms-2">
+                                    {% if intervention.status == 'Resolved' %}
+                                        <span class="badge bg-success">{{ intervention.status }}</span>
+                                    {% elif intervention.status == 'In Progress' %}
+                                        <span class="badge bg-warning">{{ intervention.status }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ intervention.status or 'Open' }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                            <p class="text-muted mb-0">No recent interventions</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bell me-2"></i>Recent Alerts
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_alerts %}
+                        {% for alert in recent_alerts %}
+                        <div class="activity-item border-bottom pb-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ alert.title }}</h6>
+                                    <small class="text-muted">
+                                        {{ alert.student.full_name() if alert.student else 'Unknown Student' }}
+                                        • {{ alert.created_at.strftime('%b %d, %Y') if alert.created_at else 'No date' }}
+                                    </small>
+                                    {% if alert.description %}
+                                    <p class="mb-0 small text-muted mt-1">{{ alert.description[:50] }}{% if alert.description|length > 50 %}...{% endif %}</p>
+                                    {% endif %}
+                                </div>
+                                <div class="ms-2">
+                                    {% if alert.severity == 'Critical' %}
+                                        <span class="badge bg-danger">{{ alert.severity }}</span>
+                                    {% elif alert.severity == 'High' %}
+                                        <span class="badge bg-warning">{{ alert.severity }}</span>
+                                    {% elif alert.severity == 'Medium' %}
+                                        <span class="badge bg-info">{{ alert.severity }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ alert.severity or 'Low' }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                            <p class="text-muted mb-0">No recent alerts</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ url_for('main.students') }}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column justify-content-center">
+                                <i class="fas fa-users fa-2x mb-2"></i>
+                                <span>View All Students</span>
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ url_for('main.analytics') }}" class="btn btn-outline-info w-100 h-100 d-flex flex-column justify-content-center">
+                                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                <span>View Analytics</span>
+                            </a>
+                        </div>
+                        {% if current_user.role in ['admin', 'faculty'] %}
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ url_for('main.predict') }}" class="btn btn-outline-warning w-100 h-100 d-flex flex-column justify-content-center">
+                                <i class="fas fa-brain fa-2x mb-2"></i>
+                                <span>AI Prediction</span>
+                            </a>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-3 mb-3">
+                            <button class="btn btn-outline-secondary w-100 h-100 d-flex flex-column justify-content-center" onclick="exportData()">
+                                <i class="fas fa-download fa-2x mb-2"></i>
+                                <span>Export Data</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Risk Distribution Chart
+    var ctx = document.getElementById('riskChart');
+    if (ctx) {
+        var highRisk = {{ high_risk_count or 0 }};
+        var mediumRisk = {{ medium_risk_count or 0 }};
+        var lowRisk = {{ low_risk_count or 0 }};
+        var criticalRisk = {{ critical_risk_count or 0 }};
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Critical', 'High Risk', 'Medium Risk', 'Low Risk'],
+                datasets: [{
+                    label: 'Number of Students',
+                    data: [criticalRisk, highRisk, mediumRisk, lowRisk],
+                    backgroundColor: [
+                        'rgba(220, 53, 69, 0.8)',
+                        'rgba(255, 193, 7, 0.8)',
+                        'rgba(255, 152, 0, 0.8)',
+                        'rgba(40, 167, 69, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(220, 53, 69, 1)',
+                        'rgba(255, 193, 7, 1)',
+                        'rgba(255, 152, 0, 1)',
+                        'rgba(40, 167, 69, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y + ' students';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+
+function refreshDashboard() {
+    location.reload();
+}
+
+function exportData() {
+    // Simple export functionality - you can enhance this
+    alert('Export functionality would be implemented here. This could export to CSV, PDF, or Excel format.');
+}
+</script>
+{% endblock %}

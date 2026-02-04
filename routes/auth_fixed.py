@@ -4,91 +4,103 @@ from models import db, User, Student
 
 auth_bp = Blueprint('auth', __name__)
 
-@auth_bp.route('/register', methods=['GET', 'POST'])
-@login_required
-def register():
-    # Only Admin can register new users
-    if current_user.role != 'admin':
-        flash('You do not have permission to access this page.', 'danger')
-        return redirect(url_for('main.dashboard'))
-
-    if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        role_str = request.form.get('role')
-        
-        # Convert string role to valid role
-        valid_roles = ['admin', 'faculty', 'student', 'parent']
-        if role_str not in valid_roles:
-            flash('Invalid role selected.', 'danger')
-            return redirect(url_for('auth.register'))
-        
-        user = User.query.filter_by(email=email).first()
-        if user:
-            flash('Email already exists.', 'danger')
-            return redirect(url_for('auth.register'))
-            
-        # Validation for Student role
-        if role_str == 'student':
-            student_record = Student.query.filter_by(email=email).first()
-            if not student_record:
-                flash(f'No Student record found with email {email}. Please create the student profile first.', 'warning')
-                return redirect(url_for('auth.register'))
-
-        new_user = User(
-            username=username, 
-            email=email, 
-            role=role_str
-        )
-        new_user.set_password(password)
-        db.session.add(new_user)
-        db.session.commit()
-        
-        # If student, link user_id
-        if role_str == 'student' and student_record:
-            student_record.user_id = new_user.id
-            db.session.commit()
-        
-        flash('User created successfully.', 'success')
-        return redirect(url_for('main.dashboard'))
-        
-    return render_template('register.html')
-
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    if current_user.is_authenticated:
-        if current_user.role == 'student':
-            return redirect(url_for('main.my_profile'))
-        elif current_user.role == 'parent':
-            return redirect(url_for('main.dashboard'))  # Fallback for parent
-        return redirect(url_for('main.dashboard'))
-    
+    """Handle user login"""
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        remember = True if request.form.get('remember') else False
-        
-        user = User.query.filter_by(email=email).first()
-        
-        if not user or not user.check_password(password):
-            flash('Please check your login details and try again.', 'danger')
-            return redirect(url_for('auth.login'))
+        try:
+            email = request.form.get('email')
+            password = request.form.get('password')
+            remember = bool(request.form.get('remember'))
             
-        login_user(user, remember=remember)
-        current_app.logger.info(f'User {user.email} logged in successfully')
-        
-        if user.role == 'student':
-            return redirect(url_for('main.my_profile'))
-        elif user.role == 'parent':
-            return redirect(url_for('main.dashboard'))  # Fallback for parent
+            # Validate input
+            if not email or not password:
+                flash('Please enter both email and password', 'danger')
+                return render_template('login_standalone.html')
             
-        return redirect(url_for('main.dashboard'))
-        
+            # Find user by email
+            user = User.query.filter_by(email=email).first()
+            
+            if user and user.check_password(password):
+                login_user(user, remember=remember)
+                
+                # Redirect based on user role
+                if user.role == 'student':
+                    # Find student profile for this user
+                    student = Student.query.filter_by(user_id=user.id).first()
+                    if student:
+                        return redirect(url_for('main.student_detail', id=student.id))
+                    else:
+                        return redirect(url_for('main.dashboard'))
+                elif user.role == 'parent':
+                    return redirect(url_for('main.dashboard'))
+                else:  # admin or faculty
+                    return redirect(url_for('main.dashboard'))
+            else:
+                flash('Invalid email or password', 'danger')
+                
+        except Exception as e:
+            flash(f'Login error: {str(e)}', 'danger')
+    
     return render_template('login_standalone.html')
 
 @auth_bp.route('/logout')
 @login_required
 def logout():
-    logout_user()
+    """Handle user logout"""
+    try:
+        logout_user()
+        flash('You have been logged out successfully', 'success')
+    except Exception as e:
+        flash(f'Logout error: {str(e)}', 'danger')
+    
     return redirect(url_for('auth.login'))
+
+@auth_bp.route('/register', methods=['GET', 'POST'])
+@login_required
+def register():
+    """Handle user registration (admin only)"""
+    if current_user.role != 'admin':
+        flash('You do not have permission to access this page.', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    if request.method == 'POST':
+        try:
+            username = request.form.get('username')
+            email = request.form.get('email')
+            password = request.form.get('password')
+            role = request.form.get('role')
+            
+            # Validate input
+            if not all([username, email, password, role]):
+                flash('Please fill in all fields', 'danger')
+                return render_template('register.html')
+            
+            # Check if user already exists
+            if User.query.filter_by(email=email).first():
+                flash('User with this email already exists', 'danger')
+                return render_template('register.html')
+            
+            if User.query.filter_by(username=username).first():
+                flash('Username already taken', 'danger')
+                return render_template('register.html')
+            
+            # Create new user
+            new_user = User(
+                username=username,
+                email=email,
+                role=role
+            )
+            new_user.set_password(password)
+            
+            db.session.add(new_user)
+            db.session.commit()
+            
+            flash(f'User {email} created successfully!', 'success')
+            return redirect(url_for('main.dashboard'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating user: {str(e)}', 'danger')
+    
+    return render_template('register.html')
