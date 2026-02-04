@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduGuard - Early Warning System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/modern.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="{{ url_for('main.dashboard') }}" class="navbar-brand">
+                <i class="fas fa-graduation-cap"></i>
+                EduGuard
+            </a>
+            
+            <div class="navbar-nav">
+                <a href="{{ url_for('main.dashboard') }}" class="nav-link">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+                <a href="{{ url_for('main.students') }}" class="nav-link">
+                    <i class="fas fa-users"></i>
+                    Students
+                </a>
+                <a href="{{ url_for('main.analytics') }}" class="nav-link">
+                    <i class="fas fa-chart-line"></i>
+                    Analytics
+                </a>
+                <a href="{{ url_for('main.interventions') }}" class="nav-link">
+                    <i class="fas fa-hands-helping"></i>
+                    Interventions
+                </a>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <!-- Notifications -->
+                <button class="btn btn-icon btn-secondary" onclick="toggleNotifications()">
+                    <i class="fas fa-bell"></i>
+                    <span class="badge badge-danger" id="notificationCount">3</span>
+                </button>
+                
+                <!-- User Menu -->
+                <div class="relative">
+                    <button class="btn btn-secondary" onclick="toggleUserMenu()">
+                        <i class="fas fa-user"></i>
+                        {{ current_user.username }}
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
+                    <div id="userMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200">
+                        <a href="{{ url_for('main.profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                            <i class="fas fa-user-circle mr-2"></i>
+                            Profile
+                        </a>
+                        <a href="{{ url_for('main.settings') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                            <i class="fas fa-cog mr-2"></i>
+                            Settings
+                        </a>
+                        <hr class="my-1">
+                        <a href="{{ url_for('auth.logout') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                            <i class="fas fa-sign-out-alt mr-2"></i>
+                            Logout
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Mobile Menu Toggle -->
+                <button class="btn btn-secondary md:hidden" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2 class="text-xl font-bold">EduGuard</h2>
+            <p class="text-sm opacity-75">Early Warning System</p>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('main.dashboard') }}" class="sidebar-item">
+                <i class="fas fa-tachometer-alt mr-3"></i>
+                Dashboard
+            </a>
+            
+            {% if current_user.role in ['ADMIN', 'TEACHER'] %}
+            <div class="sidebar-submenu">
+                <a href="{{ url_for('main.students') }}" class="sidebar-item">
+                    <i class="fas fa-users mr-3"></i>
+                    Student Management
+                </a>
+                <a href="{{ url_for('main.add_student') }}" class="sidebar-item">
+                    <i class="fas fa-user-plus mr-3"></i>
+                    Add Student
+                </a>
+                <a href="{{ url_for('main.risk_analysis') }}" class="sidebar-item">
+                    <i class="fas fa-exclamation-triangle mr-3"></i>
+                    Risk Analysis
+                </a>
+            </div>
+            {% endif %}
+            
+            {% if current_user.role == 'ADMIN' %}
+            <div class="sidebar-submenu">
+                <a href="{{ url_for('main.users') }}" class="sidebar-item">
+                    <i class="fas fa-user-shield mr-3"></i>
+                    User Management
+                </a>
+                <a href="{{ url_for('main.system_settings') }}" class="sidebar-item">
+                    <i class="fas fa-cogs mr-3"></i>
+                    System Settings
+                </a>
+                <a href="{{ url_for('main.reports') }}" class="sidebar-item">
+                    <i class="fas fa-file-alt mr-3"></i>
+                    Reports
+                </a>
+            </div>
+            {% endif %}
+            
+            <a href="{{ url_for('main.analytics') }}" class="sidebar-item">
+                <i class="fas fa-chart-line mr-3"></i>
+                Analytics
+            </a>
+            
+            <a href="{{ url_for('main.interventions') }}" class="sidebar-item">
+                <i class="fas fa-hands-helping mr-3"></i>
+                Interventions
+            </a>
+            
+            <a href="{{ url_for('main.alerts') }}" class="sidebar-item">
+                <i class="fas fa-bell mr-3"></i>
+                Alerts
+                <span class="badge badge-warning ml-auto">3</span>
+            </a>
+            
+            {% if current_user.role == 'PARENT' %}
+            <div class="sidebar-submenu">
+                <a href="{{ url_for('main.my_children') }}" class="sidebar-item">
+                    <i class="fas fa-child mr-3"></i>
+                    My Children
+                </a>
+                <a href="{{ url_for('main.reports') }}" class="sidebar-item">
+                    <i class="fas fa-chart-bar mr-3"></i>
+                    Progress Reports
+                </a>
+            </div>
+            {% endif %}
+            
+            {% if current_user.role == 'STUDENT' %}
+            <div class="sidebar-submenu">
+                <a href="{{ url_for('main.my_progress') }}" class="sidebar-item">
+                    <i class="fas fa-chart-line mr-3"></i>
+                    My Progress
+                </a>
+                <a href="{{ url_for('main.assignments') }}" class="sidebar-item">
+                    <i class="fas fa-tasks mr-3"></i>
+                    Assignments
+                </a>
+                <a href="{{ url_for('main.resources') }}" class="sidebar-item">
+                    <i class="fas fa-book mr-3"></i>
+                    Resources
+                </a>
+            </div>
+            {% endif %}
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="container mb-4">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} animate-fadeIn">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Notifications Panel -->
+    <div class="notifications-panel" id="notificationsPanel">
+        <div class="p-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold">Notifications</h3>
+        </div>
+        <div class="max-h-96 overflow-y-auto">
+            <div class="notification-item">
+                <div class="notification-title">
+                    <i class="fas fa-exclamation-triangle text-warning mr-2"></i>
+                    High Risk Alert
+                </div>
+                <div class="notification-message">
+                    Student John Doe's risk level has increased to HIGH
+                </div>
+                <div class="notification-time">2 hours ago</div>
+            </div>
+            
+            <div class="notification-item">
+                <div class="notification-title">
+                    <i class="fas fa-calendar-check text-success mr-2"></i>
+                    Intervention Scheduled
+                </div>
+                <div class="notification-message">
+                    Counseling session scheduled for Jane Smith
+                </div>
+                <div class="notification-time">5 hours ago</div>
+            </div>
+            
+            <div class="notification-item">
+                <div class="notification-title">
+                    <i class="fas fa-chart-line text-info mr-2"></i>
+                    Weekly Report Generated
+                </div>
+                <div class="notification-message">
+                    Weekly risk analysis report is ready for review
+                </div>
+                <div class="notification-time">1 day ago</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Sidebar Toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            sidebar.classList.toggle('open');
+            mainContent.classList.toggle('sidebar-open');
+        }
+        
+        // Notifications Toggle
+        function toggleNotifications() {
+            const panel = document.getElementById('notificationsPanel');
+            panel.classList.toggle('open');
+        }
+        
+        // User Menu Toggle
+        function toggleUserMenu() {
+            const menu = document.getElementById('userMenu');
+            menu.classList.toggle('hidden');
+        }
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            const userMenu = document.getElementById('userMenu');
+            const notificationsPanel = document.getElementById('notificationsPanel');
+            
+            if (!event.target.closest('#userMenu') && !event.target.closest('[onclick*="toggleUserMenu"]')) {
+                userMenu.classList.add('hidden');
+            }
+            
+            if (!event.target.closest('#notificationsPanel') && !event.target.closest('[onclick*="toggleNotifications"]')) {
+                notificationsPanel.classList.remove('open');
+            }
+        });
+        
+        // Auto-refresh notifications
+        function updateNotificationCount() {
+            fetch('/api/notifications/count')
+                .then(response => response.json())
+                .then(data => {
+                    const countElement = document.getElementById('notificationCount');
+                    if (data.count > 0) {
+                        countElement.textContent = data.count;
+                        countElement.style.display = 'inline-flex';
+                    } else {
+                        countElement.style.display = 'none';
+                    }
+                })
+                .catch(error => console.error('Error fetching notifications:', error));
+        }
+        
+        // Update notifications every 30 seconds
+        setInterval(updateNotificationCount, 30000);
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNotificationCount();
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>
