@@ -1,0 +1,377 @@
+{% extends "layout.html" %}
+
+{% block title %}Student Dashboard - EduGuard{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Welcome, {{ student.full_name() }}!</h2>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('student.student_profile') }}" class="btn btn-outline-primary">
+                <i class="fas fa-user-edit me-2"></i>Edit Profile
+            </a>
+            <a href="{{ url_for('student.student_attendance') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-calendar-alt me-2"></i>Attendance
+            </a>
+            <a href="{{ url_for('student.student_grades') }}" class="btn btn-outline-info">
+                <i class="fas fa-chart-bar me-2"></i>Grades
+            </a>
+        </div>
+    </div>
+    
+    <!-- Student Info Card -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ student.student_id }}</h4>
+                            <p>Student ID</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-id-card fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="mb-0">{{ student.department or 'Not Specified' }}</h6>
+                            <p>Department</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-graduation-cap fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="mb-0">{{ student.year or 'N/A' }}</h6>
+                            <p>Year</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-calendar fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ "%.1f"|format(student.gpa or 0) }}</h4>
+                            <p>Current GPA</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-award fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="mb-0">{{ student.academic_standing() }}</h6>
+                            <p>Standing</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-trophy fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ attendance_rate or 0 }}%</h4>
+                            <p>Attendance Rate</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-percentage fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="mb-0">{{ student.credits_completed or 0 }}</h6>
+                            <p>Credits</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-star fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ risk_profile.risk_level if risk_profile else 'Low' }}</h4>
+                            <p>Risk Level</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="mb-0">{{ risk_profile.risk_score if risk_profile else 0 }}</h6>
+                            <p>Risk Score</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-chart-line fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Personalized Tips -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>Personalized Tips for You
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if tips %}
+                        {% for tip in tips %}
+                        <div class="alert alert-{{ 'danger' if tip.priority == 'critical' else 'warning' if tip.priority == 'high' else 'info' if tip.priority == 'medium' else 'secondary' }} mb-3">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3">
+                                    <i class="{{ tip.icon }} fa-2x opacity-75"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ tip.title }}</h6>
+                                    <p class="mb-0">{{ tip.description }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-lightbulb fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No personalized tips available at this time. Continue working hard!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Section -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Attendance Trend (Last 30 Days)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="attendanceChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Academic Performance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="gradesChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Assessment -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Risk Assessment Breakdown
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6 class="text-primary">Attendance Factor</h6>
+                                <p class="mb-0">{{ "%.1f"|format(risk_profile.attendance_factor or 0) }}</p>
+                                <div class="progress">
+                                    <div class="progress-bar bg-{{ 'danger' if risk_profile.attendance_factor > 30 else 'warning' if risk_profile.attendance_factor > 20 else 'success' }}" 
+                                         style="width: {{ risk_profile.attendance_factor }}%">
+                                        {{ "%.1f"|format(risk_profile.attendance_factor) }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6 class="text-info">Academic Factor</h6>
+                                <p class="mb-0">{{ "%.1f"|format(risk_profile.academic_factor or 0) }}</p>
+                                <div class="progress">
+                                    <div class="progress-bar bg-{{ 'danger' if risk_profile.academic_factor > 30 else 'warning' if risk_profile.academic_factor > 20 else 'success' }}" 
+                                         style="width: {{ risk_profile.academic_factor }}%">
+                                        {{ "%.1f"|format(risk_profile.academic_factor) }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6 class="text-warning">Engagement Factor</h6>
+                                <p class="mb-0">{{ "%.1f"|format(risk_profile.engagement_factor or 0) }}</p>
+                                <div class="progress">
+                                    <div class="progress-bar bg-{{ 'danger' if risk_profile.engagement_factor > 30 else 'warning' if risk_profile.engagement_factor > 20 else 'success' }}" 
+                                         style="width: {{ risk_profile.engagement_factor }}%">
+                                        {{ "%.1f"|format(risk_profile.engagement_factor) }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6 class="text-secondary">Demographic Factor</h6>
+                                <p class="mb-0">{{ "%.1f"|format(risk_profile.demographic_factor or 0) }}</p>
+                                <div class="progress">
+                                    <div class="progress-bar bg-secondary" style="width: {{ risk_profile.demographic_factor }}%">
+                                        {{ "%.1f"|format(risk_profile.demographic_factor) }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Attendance Chart
+    var attendanceCtx = document.getElementById('attendanceChart');
+    if (attendanceCtx) {
+        fetch('/student/api/attendance_data')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error loading attendance data:', data.error);
+                    return;
+                }
+                
+                new Chart(attendanceCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Attendance',
+                            data: data.present,
+                            borderColor: 'rgba(40, 167, 69, 1)',
+                            backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                            fill: true
+                        }, {
+                            label: 'Absent',
+                            data: data.absent,
+                            borderColor: 'rgba(220, 53, 69, 1)',
+                            backgroundColor: 'rgba(220, 53, 69, 0.2)',
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    stepSize: 10
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching attendance data:', error);
+            });
+    }
+    
+    // Grades Chart
+    var gradesCtx = document.getElementById('gradesChart');
+    if (gradesCtx) {
+        fetch('/student/api/grade_data')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error loading grade data:', data.error);
+                    return;
+                }
+                
+                new Chart(gradesCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Grade Points',
+                            data: data.grades,
+                            backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 2
+                        }, {
+                            label: 'Percentage',
+                            data: data.percentages,
+                            backgroundColor: 'rgba(255, 193, 7, 0.8)',
+                            borderColor: 'rgba(255, 193, 7, 1)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100
+                            },
+                            x: {
+                                ticks: {
+                                    maxRotation: 45
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching grade data:', error);
+            });
+    }
+});
+</script>
+{% endblock %}

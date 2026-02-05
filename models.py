@@ -2,7 +2,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime, date
 from werkzeug.security import generate_password_hash, check_password_hash
+import hashlib
 
+# Create shared SQLAlchemy instance
 db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
@@ -22,7 +24,14 @@ class User(UserMixin, db.Model):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+        """Check password using both Werkzeug and simple hash methods"""
+        try:
+            # Try Werkzeug hash first
+            return check_password_hash(self.password_hash, password)
+        except:
+            # Fallback to simple SHA256 hash
+            simple_hash = hashlib.sha256(password.encode()).hexdigest()
+            return self.password_hash == simple_hash
 
     def __repr__(self):
         return f'<User {self.email}>'
@@ -139,6 +148,9 @@ class RiskProfile(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
     risk_score = db.Column(db.Float, default=0.0)  # 0 to 100
     risk_level = db.Column(db.String(20), default='Low')  # Low, Medium, High, Critical
+    ml_prediction = db.Column(db.Integer)  # 0 or 1 for dropout prediction
+    ml_probability = db.Column(db.Float)  # Dropout probability percentage
+    ml_confidence = db.Column(db.Float)  # Model confidence score
     last_updated = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Risk factors
@@ -172,22 +184,117 @@ class RiskProfile(db.Model):
     def __repr__(self):
         return f'<RiskProfile {self.student_id} - {self.risk_level}>'
 
-class Alert(db.Model):
-    __tablename__ = 'alerts'
+class Counselling(db.Model):
+    __tablename__ = 'counselling'
     
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
-    alert_type = db.Column(db.String(50))  # Attendance, Academic, Behavioral, Risk
+    date = db.Column(db.Date, nullable=False, default=date.today)
+    counselling_type = db.Column(db.String(50))  # Academic, Personal, Career, Mental Health, Financial
+    remarks = db.Column(db.Text)
+    follow_up_date = db.Column(db.Date)
+    status = db.Column(db.String(20), default='Scheduled')  # Scheduled, In Progress, Completed, Cancelled
+    counsellor_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    student = db.relationship('Student', backref='counselling_sessions')
+    counsellor = db.relationship('User', foreign_keys=[counsellor_id], backref='counselling_assigned')
+    
+    def __repr__(self):
+        return f'<Counselling {self.student_id} - {self.counselling_type}>'
+
+class MentorAssignment(db.Model):
+    __tablename__ = 'mentor_assignments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    mentor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
+    assignment_date = db.Column(db.Date, default=date.today)
+    status = db.Column(db.String(20), default='Active')  # Active, Inactive, Completed
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    mentor = db.relationship('User', foreign_keys=[mentor_id], backref='mentee_assignments')
+    student = db.relationship('Student', backref='mentor_assignments')
+    
+    def __repr__(self):
+        return f'<MentorAssignment {self.mentor_id}-{self.student_id}>'
+
+class PerformanceTracker(db.Model):
+    __tablename__ = 'performance_tracker'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
+    subject_name = db.Column(db.String(100), nullable=False)  # Mathematics, Physics, etc.
+    exam_type = db.Column(db.String(50))  # Midterm, Final, Quiz, Assignment
+    before_score = db.Column(db.Float)  # Score before intervention
+    after_score = db.Column(db.Float)  # Score after intervention
+    max_score = db.Column(db.Float, default=100.0)
+    improvement_percentage = db.Column(db.Float)  # Calculated improvement
+    exam_date = db.Column(db.Date, nullable=False)
+    semester = db.Column(db.Integer, nullable=False)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    student = db.relationship('Student', backref='performance_records')
+    
+    def calculate_improvement(self):
+        """Calculate improvement percentage"""
+        if self.max_score > 0:
+            improvement = ((self.after_score - self.before_score) / self.max_score) * 100
+            self.improvement_percentage = round(improvement, 2)
+            return self.improvement_percentage
+        return 0.0
+    
+    def __repr__(self):
+        return f'<PerformanceTracker {self.student_id} - {self.subject_name}>'
+
+class StudentReason(db.Model):
+    __tablename__ = 'student_reasons'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
+    financial_reason = db.Column(db.Text)  # Financial difficulties, tuition fees, etc.
+    academic_reason = db.Column(db.Text)  # Academic struggles, difficult courses, etc.
+    family_reason = db.Column(db.Text)  # Family issues, responsibilities, etc.
+    health_reason = db.Column(db.Text)  # Health problems, mental health, etc.
+    personal_reason = db.Column(db.Text)  # Personal issues, motivation, etc.
+    other_reason = db.Column(db.Text)  # Other reasons not categorized
     severity = db.Column(db.String(20), default='Medium')  # Low, Medium, High, Critical
-    title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text)
-    status = db.Column(db.String(20), default='Active')  # Active, Resolved, Dismissed
+    status = db.Column(db.String(20), default='Active')  # Active, Resolved, Addressed
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     resolved_at = db.Column(db.DateTime)
     resolved_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     
     # Relationships
-    resolver = db.relationship('User', foreign_keys=[resolved_by], backref='resolved_alerts')
-
+    student = db.relationship('Student', backref='reason_records')
+    resolver = db.relationship('User', foreign_keys=[resolved_by], backref='resolved_reasons')
+    
     def __repr__(self):
-        return f'<Alert {self.student_id} - {self.alert_type}>'
+        return f'<StudentReason {self.student_id}>'
+
+class Alert(db.Model):
+    __tablename__ = 'alerts'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
+    alert_type = db.Column(db.String(50))  # Risk Level Change, Attendance, Academic Performance, Mental Health, Financial Aid
+    severity = db.Column(db.String(20))  # Critical, High, Medium, Low
+    title = db.Column(db.String(200))
+    description = db.Column(db.Text)
+    status = db.Column(db.String(20), default='Active')  # Active, Resolved, Acknowledged
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    resolved_at = db.Column(db.DateTime)
+    resolved_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    
+    # Relationships
+    student = db.relationship('Student', backref='alerts')
+    resolver = db.relationship('User', foreign_keys=[resolved_by], backref='resolved_alerts')
+    
+    def __repr__(self):
+        return f'<Alert {self.id} - {self.alert_type}>'

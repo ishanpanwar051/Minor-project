@@ -1,0 +1,385 @@
+{% extends "layout.html" %}
+
+{% block title %}Reason Analysis - EduGuard{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Dropout Reason Analysis</h2>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('reason.manage_reasons') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-list me-2"></i>Manage Reasons
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistics Overview -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-2">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ total_reasons or 0 }}</h4>
+                            <p>Total Reasons</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clipboard-list fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ active_reasons or 0 }}</h4>
+                            <p>Active</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clock fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ resolved_reasons or 0 }}</h4>
+                            <p>Resolved</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ ((resolved_reasons / (total_reasons if total_reasons > 0 else 1)) * 100)|round(1) }}%</h4>
+                            <p>Resolution Rate</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-percentage fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Reason Categories -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Reason Categories
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="reasonCategoryChart" width="400" height="300"></canvas>
+                    
+                    <div class="mt-4">
+                        <h6>Category Breakdown:</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>Financial:</span>
+                                    <span class="badge bg-warning">{{ financial_count or 0 }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>Academic:</span>
+                                    <span class="badge bg-info">{{ academic_count or 0 }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>Family:</span>
+                                    <span class="badge bg-primary">{{ family_count or 0 }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>Health:</span>
+                                    <span class="badge bg-success">{{ health_count or 0 }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>Personal:</span>
+                                    <span class="badge bg-secondary">{{ personal_count or 0 }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>Other:</span>
+                                    <span class="badge bg-dark">{{ other_count or 0 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Severity Distribution -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Severity Distribution
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="severityChart" width="400" height="300"></canvas>
+                    
+                    <div class="mt-4">
+                        <h6>Severity Levels:</h6>
+                        {% for stat in severity_stats %}
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>{{ stat.severity }}:</span>
+                                <div class="progress flex-grow-1 mx-3" style="height: 25px;">
+                                    <div class="progress-bar bg-{{ 
+                                        'danger' if stat.severity == 'Critical' 
+                                        else 'warning' if stat.severity == 'High' 
+                                        else 'info' if stat.severity == 'Medium' 
+                                        else 'success' 
+                                    }}" 
+                                         style="width: {{ (stat.count / (total_reasons if total_reasons > 0 else 1)) * 100 }}%">
+                                        {{ stat.count }}
+                                    </div>
+                                </div>
+                                <span class="badge bg-{{ 
+                                    'danger' if stat.severity == 'Critical' 
+                                    else 'warning' if stat.severity == 'High' 
+                                    else 'info' if stat.severity == 'Medium' 
+                                    else 'success' 
+                                }} ms-2">
+                                    {{ stat.count }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Reasons -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Recent Reasons
+                    </h5>
+                    <span class="badge bg-primary">{{ recent_reasons|length }}</span>
+                </div>
+                <div class="card-body">
+                    {% if recent_reasons %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Student</th>
+                                        <th>Category</th>
+                                        <th>Severity</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for reason in recent_reasons %}
+                                    <tr>
+                                        <td>{{ reason.student.full_name() }}</td>
+                                        <td>
+                                            {% if reason.financial_reason %}
+                                                <span class="badge bg-warning">Financial</span>
+                                            {% elif reason.academic_reason %}
+                                                <span class="badge bg-info">Academic</span>
+                                            {% elif reason.family_reason %}
+                                                <span class="badge bg-primary">Family</span>
+                                            {% elif reason.health_reason %}
+                                                <span class="badge bg-success">Health</span>
+                                            {% elif reason.personal_reason %}
+                                                <span class="badge bg-secondary">Personal</span>
+                                            {% else %}
+                                                <span class="badge bg-dark">Other</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ 
+                                                'danger' if reason.severity == 'Critical' 
+                                                else 'warning' if reason.severity == 'High' 
+                                                else 'info' if reason.severity == 'Medium' 
+                                                else 'success' 
+                                            }}">
+                                                {{ reason.severity }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ 'success' if reason.status == 'Resolved' else 'warning' }}">
+                                                {{ reason.status }}
+                                            </span>
+                                        </td>
+                                        <td>{{ reason.created_at.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            {% if reason.status == 'Active' %}
+                                            <button class="btn btn-sm btn-success" onclick="resolveReason({{ reason.id }})">
+                                                <i class="fas fa-check"></i> Resolve
+                                            </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-clipboard fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No reason records found</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Reason Category Pie Chart
+    var categoryCtx = document.getElementById('reasonCategoryChart');
+    if (categoryCtx) {
+        var categoryData = {
+            labels: ['Financial', 'Academic', 'Family', 'Health', 'Personal', 'Other'],
+            data: [{{ financial_count or 0 }}, {{ academic_count or 0 }}, {{ family_count or 0 }}, {{ health_count or 0 }}, {{ personal_count or 0 }}, {{ other_count or 0 }}]
+        };
+        
+        new Chart(categoryCtx, {
+            type: 'pie',
+            data: {
+                labels: categoryData.labels,
+                datasets: [{
+                    data: categoryData.data,
+                    backgroundColor: [
+                        'rgba(255, 193, 7, 0.8)',
+                        'rgba(23, 162, 184, 0.8)',
+                        'rgba(13, 110, 253, 0.8)',
+                        'rgba(40, 167, 69, 0.8)',
+                        'rgba(108, 117, 125, 0.8)',
+                        'rgba(52, 58, 64, 0.8)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                var label = context.label || '';
+                                var value = context.parsed || 0;
+                                var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                                var percentage = ((value / total) * 100).toFixed(1);
+                                return label + ': ' + value + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Severity Distribution Bar Chart
+    var severityCtx = document.getElementById('severityChart');
+    if (severityCtx) {
+        var severityLabels = [{% for stat in severity_stats %}'{{ stat.severity }}'{% if not loop.last %},{% endif %}{% endfor %}];
+        var severityData = [{% for stat in severity_stats %}{{ stat.count }}{% if not loop.last %},{% endif %}{% endfor %}];
+        var severityColors = [
+            'rgba(220, 53, 69, 0.8)',
+            'rgba(255, 193, 7, 0.8)',
+            'rgba(23, 162, 184, 0.8)',
+            'rgba(40, 167, 69, 0.8)'
+        ];
+        
+        new Chart(severityCtx, {
+            type: 'bar',
+            data: {
+                labels: severityLabels,
+                datasets: [{
+                    label: 'Number of Reasons',
+                    data: severityData,
+                    backgroundColor: severityColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+});
+
+function resolveReason(reasonId) {
+    if (confirm('Are you sure you want to mark this reason as resolved?')) {
+        fetch(`/reason/${reasonId}/resolve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while resolving the reason.');
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends "layout.html" %}
+
+{% block title %}Schedule Counselling - EduGuard{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Schedule Counselling Session</h2>
+        <a href="{{ url_for('counselling.counselling_dashboard') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-plus me-2"></i>Schedule New Session
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="student_id" class="form-label">Select Student *</label>
+                                <select class="form-select" id="student_id" name="student_id" required>
+                                    <option value="">Choose a student...</option>
+                                    {% for student in students %}
+                                    <option value="{{ student.id }}">
+                                        {{ student.student_id }} - {{ student.full_name() }} ({{ student.department }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="date" class="form-label">Session Date *</label>
+                                <input type="date" class="form-control" id="date" name="date" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="type" class="form-label">Counselling Type *</label>
+                                <select class="form-select" id="type" name="type" required>
+                                    <option value="">Select type...</option>
+                                    <option value="Academic">Academic Counselling</option>
+                                    <option value="Personal">Personal Counselling</option>
+                                    <option value="Career">Career Guidance</option>
+                                    <option value="Mental Health">Mental Health Support</option>
+                                    <option value="Financial">Financial Aid Consultation</option>
+                                    <option value="Family">Family Counselling</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="follow_up_date" class="form-label">Follow-up Date</label>
+                                <input type="date" class="form-control" id="follow_up_date" name="follow_up_date">
+                                <div class="form-text">Optional: Schedule follow-up session</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="remarks" class="form-label">Session Notes</label>
+                            <textarea class="form-control" id="remarks" name="remarks" rows="4" placeholder="Enter session objectives, observations, and recommendations..."></textarea>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Schedule Session
+                            </button>
+                            <a href="{{ url_for('counselling.counselling_dashboard') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Quick Stats
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="text-primary">Total Students</h6>
+                        <h3>{{ students|length }}</h3>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-info">Today's Sessions</h6>
+                        <h3>0</h3>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-warning">This Week</h6>
+                        <h3>0</h3>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Counselling Types</h6>
+                        <div class="small">
+                            <div class="mb-1"><i class="fas fa-graduation-cap text-primary me-2"></i>Academic</div>
+                            <div class="mb-1"><i class="fas fa-user text-info me-2"></i>Personal</div>
+                            <div class="mb-1"><i class="fas fa-briefcase text-success me-2"></i>Career</div>
+                            <div class="mb-1"><i class="fas fa-heart text-danger me-2"></i>Mental Health</div>
+                            <div class="mb-1"><i class="fas fa-dollar-sign text-warning me-2"></i>Financial</div>
+                            <div class="mb-1"><i class="fas fa-users text-secondary me-2"></i>Family</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
