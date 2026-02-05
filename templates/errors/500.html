@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Server Error - EduGuard{% endblock %}
+
+{% block login_content %}
+<div class="container text-center mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <i class="fas fa-exclamation-circle fa-3x text-danger mb-3"></i>
+                    <h2>500 - Server Error</h2>
+                    <p class="text-muted">Something went wrong on our end. Please try again later.</p>
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">Go to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

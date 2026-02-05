@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - EduGuard{% endblock %}
+
+{% block page_title %}<i class="fas fa-tachometer-alt"></i> Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <h4><i class="fas fa-users"></i> {{ total_students }}</h4>
+                <p class="mb-0">Total Students</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <h4><i class="fas fa-exclamation-triangle"></i> {{ high_risk_students }}</h4>
+                <p class="mb-0">High Risk Students</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <h4><i class="fas fa-chart-line"></i> {{ attendance_rate }}%</h4>
+                <p class="mb-0">Attendance Rate</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <h4><i class="fas fa-shield-alt"></i> {{ risk_stats.low + risk_stats.medium }}</h4>
+                <p class="mb-0">Low/Medium Risk</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Risk Distribution Chart -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie"></i> Risk Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="riskChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bell"></i> Recent Alerts</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_alerts %}
+                    <div class="list-group">
+                        {% for alert in recent_alerts %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <span>
+                                    <i class="fas fa-exclamation-triangle text-{{ 'danger' if alert.severity == 'Critical' else 'warning' if alert.severity == 'High' else 'info' }}"></i>
+                                    {{ alert.title }}
+                                </span>
+                                <small class="text-muted">{{ alert.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No recent alerts</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="{{ url_for('main.students') }}" class="btn btn-outline-primary w-100 mb-2">
+                            <i class="fas fa-users"></i> View Students
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('main.attendance') }}" class="btn btn-outline-success w-100 mb-2">
+                            <i class="fas fa-calendar-check"></i> Take Attendance
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('main.risk') }}" class="btn btn-outline-warning w-100 mb-2">
+                            <i class="fas fa-exclamation-triangle"></i> Risk Analysis
+                        </a>
+                    </div>
+                    {% if current_user.role == 'admin' %}
+                    <div class="col-md-3">
+                        <a href="{{ url_for('main.admin') }}" class="btn btn-outline-secondary w-100 mb-2">
+                            <i class="fas fa-cog"></i> Admin Panel
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Risk Distribution Chart
+const ctx = document.getElementById('riskChart').getContext('2d');
+const riskData = {
+    low: {{ risk_stats.low|default(0) }},
+    medium: {{ risk_stats.medium|default(0) }},
+    high: {{ risk_stats.high|default(0) }},
+    critical: {{ risk_stats.critical|default(0) }}
+};
+
+const riskChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Low Risk', 'Medium Risk', 'High Risk', 'Critical Risk'],
+        datasets: [{
+            data: [riskData.low, riskData.medium, riskData.high, riskData.critical],
+            backgroundColor: [
+                '#28a745',
+                '#ffc107', 
+                '#fd7e14',
+                '#dc3545'
+            ],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
