@@ -1,226 +1,232 @@
-{% extends "layout.html" %}
+{% extends "base.html" %}
 
-{% block title %}Student Detail - EduGuard{% endblock %}
+{% block title %}Student Profile - {{ student.first_name }} {{ student.last_name }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Student Profile: {{ student.full_name() }}</h2>
-        <div>
-            <a href="{{ url_for('main.students') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Back to Students
-            </a>
-        </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1>
+            {{ student.first_name }} {{ student.last_name }}
+            {% if risk_profile %}
+                {% if risk_profile.risk_level == 'Critical' %}
+                    <span class="badge bg-danger">Critical Risk</span>
+                {% elif risk_profile.risk_level == 'High' %}
+                    <span class="badge bg-danger">High Risk</span>
+                {% elif risk_profile.risk_level == 'Medium' %}
+                    <span class="badge bg-warning">Medium Risk</span>
+                {% else %}
+                    <span class="badge bg-success">Low Risk</span>
+                {% endif %}
+            {% endif %}
+        </h1>
+        <p class="text-muted mb-0">Student ID: {{ student.student_id }} | Department: {{ student.department }}</p>
     </div>
-    
-    <!-- Student Info Card -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-user me-2"></i>Student Information
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Student ID:</strong> {{ student.student_id }}</p>
-                    <p><strong>Name:</strong> {{ student.full_name() }}</p>
-                    <p><strong>Email:</strong> {{ student.email or 'N/A' }}</p>
-                    <p><strong>Phone:</strong> {{ student.phone or 'N/A' }}</p>
-                    <p><strong>Semester:</strong> {{ student.semester }}</p>
-                    <p><strong>Enrollment Date:</strong> {{ student.enrollment_date.strftime('%Y-%m-%d') if student.enrollment_date else 'N/A' }}</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Risk Profile -->
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">
-                        <i class="fas fa-exclamation-triangle me-2"></i>Risk Assessment
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if risk %}
-                        <p><strong>Risk Level:</strong> 
-                            {% if risk.risk_level == 'High' %}
-                                <span class="badge bg-danger">{{ risk.risk_level }}</span>
-                            {% elif risk.risk_level == 'Medium' %}
-                                <span class="badge bg-warning">{{ risk.risk_level }}</span>
-                            {% else %}
-                                <span class="badge bg-success">{{ risk.risk_level }}</span>
-                            {% endif %}
-                        </p>
-                        <p><strong>Risk Score:</strong> {{ "%.1f"|format(risk.risk_score) }}/100</p>
-                        <p><strong>Attendance Rate:</strong> {{ "%.1f"|format(risk.attendance_rate) }}%</p>
-                        <p><strong>Average Score:</strong> {{ "%.1f"|format(risk.average_score) }}</p>
-                        <p><strong>Last Updated:</strong> {{ risk.last_updated.strftime('%Y-%m-%d %H:%M') if risk.last_updated else 'N/A' }}</p>
-                    {% else %}
-                        <p class="text-muted">No risk assessment available</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <!-- ML Prediction -->
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-brain me-2"></i>ML Prediction
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if ml_prediction %}
-                        <p><strong>Predicted Risk:</strong> 
-                            {% if ml_prediction.risk_level == 'High' %}
-                                <span class="badge bg-danger">{{ ml_prediction.risk_level }}</span>
-                            {% elif ml_prediction.risk_level == 'Medium' %}
-                                <span class="badge bg-warning">{{ ml_prediction.risk_level }}</span>
-                            {% else %}
-                                <span class="badge bg-success">{{ ml_prediction.risk_level }}</span>
-                            {% endif %}
-                        </p>
-                        <p><strong>Confidence:</strong> {{ "%.1f"|format(ml_prediction.probability * 100) }}%</p>
-                        <p><strong>Risk Score:</strong> {{ "%.1f"|format(ml_prediction.risk_score) }}/100</p>
-                    {% else %}
-                        <p class="text-muted">ML prediction not available</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+    <div>
+        <a href="mailto:{{ student.email }}" class="btn btn-outline-primary"><i class="fas fa-envelope"></i> Email Student</a>
+        <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-print"></i> Print Report</button>
     </div>
-    
-    <!-- Tabs for detailed information -->
-    <div class="card">
-        <div class="card-header">
-            <ul class="nav nav-tabs card-header-tabs" id="studentTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="attendance-tab" data-bs-toggle="tab" 
-                            data-bs-target="#attendance" type="button" role="tab">
-                        <i class="fas fa-calendar-check me-2"></i>Attendance
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="grades-tab" data-bs-toggle="tab" 
-                            data-bs-target="#grades" type="button" role="tab">
-                        <i class="fas fa-chart-line me-2"></i>Academic Records
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="interventions-tab" data-bs-toggle="tab" 
-                            data-bs-target="#interventions" type="button" role="tab">
-                        <i class="fas fa-hands-helping me-2"></i>Interventions
-                    </button>
-                </li>
-            </ul>
-        </div>
-        <div class="card-body">
-            <div class="tab-content" id="studentTabsContent">
-                <!-- Attendance Tab -->
-                <div class="tab-pane fade show active" id="attendance" role="tabpanel">
-                    {% if attendance %}
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for record in attendance %}
-                                    <tr>
-                                        <td>{{ record.date.strftime('%Y-%m-%d') if record.date else 'N/A' }}</td>
-                                        <td>
-                                            {% if record.status == 'Present' %}
-                                                <span class="badge bg-success">{{ record.status }}</span>
-                                            {% elif record.status == 'Absent' %}
-                                                <span class="badge bg-danger">{{ record.status }}</span>
-                                            {% else %}
-                                                <span class="badge bg-warning">{{ record.status }}</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <p class="text-muted">No attendance records found</p>
-                    {% endif %}
+</div>
+
+<!-- Alerts Section -->
+{% if alerts %}
+<div class="card mb-4 border-danger">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Active Alerts</h5>
+    </div>
+    <div class="card-body">
+        {% for alert in alerts %}
+            <div class="alert alert-warning mb-2">
+                <strong>{{ alert.title }}:</strong> {{ alert.description }}
+                <small class="text-muted d-block">{{ alert.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Left Column: Risk & Personal Info -->
+    <div class="col-md-4">
+        <!-- Holistic Risk Factors -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-heartbeat"></i> Holistic Risk Profile</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3 text-center">
+                    <h2 class="display-4">{{ "%.1f"|format(risk_profile.risk_score) if risk_profile else "0.0" }}</h2>
+                    <p class="text-muted">Overall Risk Score (0-100)</p>
                 </div>
                 
-                <!-- Grades Tab -->
-                <div class="tab-pane fade" id="grades" role="tabpanel">
-                    {% if grades %}
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Subject</th>
-                                        <th>Score</th>
-                                        <th>Max Score</th>
-                                        <th>Exam Type</th>
-                                        <th>Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for grade in grades %}
-                                    <tr>
-                                        <td>{{ grade.subject }}</td>
-                                        <td>{{ grade.score }}</td>
-                                        <td>{{ grade.max_score }}</td>
-                                        <td>{{ grade.exam_type or 'N/A' }}</td>
-                                        <td>{{ grade.date.strftime('%Y-%m-%d') if grade.date else 'N/A' }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <p class="text-muted">No academic records found</p>
-                    {% endif %}
-                </div>
+                <h6 class="border-bottom pb-2">Risk Factors Detected</h6>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Financial Issues
+                        {% if risk_profile.financial_issues %}
+                            <span class="badge bg-danger"><i class="fas fa-check"></i> Detected</span>
+                        {% else %}
+                            <span class="badge bg-secondary">None</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Family Problems
+                        {% if risk_profile.family_problems %}
+                            <span class="badge bg-danger"><i class="fas fa-check"></i> Detected</span>
+                        {% else %}
+                            <span class="badge bg-secondary">None</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Health Issues
+                        {% if risk_profile.health_issues %}
+                            <span class="badge bg-danger"><i class="fas fa-check"></i> Detected</span>
+                        {% else %}
+                            <span class="badge bg-secondary">None</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Social Isolation
+                        {% if risk_profile.social_isolation %}
+                            <span class="badge bg-warning"><i class="fas fa-check"></i> Detected</span>
+                        {% else %}
+                            <span class="badge bg-secondary">None</span>
+                        {% endif %}
+                    </li>
+                </ul>
                 
-                <!-- Interventions Tab -->
-                <div class="tab-pane fade" id="interventions" role="tabpanel">
-                    {% if interventions %}
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Type</th>
-                                        <th>Status</th>
-                                        <th>Notes</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for intervention in interventions %}
-                                    <tr>
-                                        <td>{{ intervention.date.strftime('%Y-%m-%d') if intervention.date else 'N/A' }}</td>
-                                        <td>{{ intervention.type or 'N/A' }}</td>
-                                        <td>
-                                            {% if intervention.status == 'Resolved' %}
-                                                <span class="badge bg-success">{{ intervention.status }}</span>
-                                            {% elif intervention.status == 'In Progress' %}
-                                                <span class="badge bg-warning">{{ intervention.status }}</span>
-                                            {% else %}
-                                                <span class="badge bg-secondary">{{ intervention.status }}</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>{{ intervention.notes or 'N/A' }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                <div class="mt-3">
+                    <label class="form-label">Mental Well-being Score</label>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar {% if risk_profile.mental_wellbeing_score < 5 %}bg-danger{% elif risk_profile.mental_wellbeing_score < 8 %}bg-warning{% else %}bg-success{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ (risk_profile.mental_wellbeing_score / 10) * 100 }}%">
+                            {{ risk_profile.mental_wellbeing_score }}/10
                         </div>
-                    {% else %}
-                        <p class="text-muted">No interventions recorded</p>
-                    {% endif %}
+                    </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Parent/Guardian Info -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user-friends"></i> Parent/Guardian Info</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Name</dt>
+                    <dd class="col-sm-8">{{ student.parent_name or 'Not provided' }}</dd>
+                    
+                    <dt class="col-sm-4">Email</dt>
+                    <dd class="col-sm-8">
+                        {% if student.parent_email %}
+                            <a href="mailto:{{ student.parent_email }}">{{ student.parent_email }}</a>
+                        {% else %}
+                            Not provided
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-4">Phone</dt>
+                    <dd class="col-sm-8">{{ student.parent_phone or 'Not provided' }}</dd>
+                </dl>
+                <div class="d-grid gap-2 mt-3">
+                    <button class="btn btn-outline-primary btn-sm"><i class="fas fa-comment-dots"></i> Send Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Academic & Attendance -->
+    <div class="col-md-8">
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h5 class="card-title text-muted">Attendance Rate</h5>
+                        <h2 class="display-4 {% if attendance_rate < 75 %}text-danger{% else %}text-success{% endif %}">
+                            {{ attendance_rate }}%
+                        </h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h5 class="card-title text-muted">Academic Performance</h5>
+                        <h2 class="display-4 {% if student.gpa < 7.0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ student.gpa }}
+                        </h2>
+                        <p class="card-text text-muted">CGPA</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance History -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Recent Attendance</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Course</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in attendance_records %}
+                            <tr>
+                                <td>{{ record.date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ record.course }}</td>
+                                <td>
+                                    {% if record.status == 'Present' %}
+                                        <span class="badge bg-success">Present</span>
+                                    {% elif record.status == 'Absent' %}
+                                        <span class="badge bg-danger">Absent</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">{{ record.status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">No records found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Counselling History -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-hands-helping"></i> Support History</h5>
+                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-plus"></i> New Session</button>
+            </div>
+            <div class="card-body">
+                {% if counselling_sessions %}
+                    <div class="list-group list-group-flush">
+                    {% for session in counselling_sessions %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ session.session_type }} Session</h6>
+                                <small>{{ session.session_date.strftime('%Y-%m-%d') }}</small>
+                            </div>
+                            <p class="mb-1">{{ session.notes }}</p>
+                            <small class="text-muted">Counsellor: {{ session.counsellor.username }}</small>
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center mb-0">No counselling sessions recorded.</p>
+                {% endif %}
             </div>
         </div>
     </div>

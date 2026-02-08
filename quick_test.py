@@ -8,7 +8,7 @@ def test_login():
     try:
         # Test login
         response = requests.post('http://127.0.0.1:5000/login', data={
-            'email': 'admin@university.edu',
+            'email': 'admin@eduguard.edu',
             'password': 'admin123'
         })
         

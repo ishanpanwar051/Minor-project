@@ -54,7 +54,7 @@ def login():
             
             if not email or not password:
                 flash('Please enter email and password', 'danger')
-                return render_template('login_new.html')
+                return render_template('login.html')
             
             user = User.query.filter_by(email=email).first()
             
@@ -68,7 +68,7 @@ def login():
         except Exception as e:
             flash(f'Login error: {str(e)}', 'danger')
     
-    return render_template('login_new.html')
+    return render_template('login.html')
 
 @main_bp.route('/logout')
 @login_required
@@ -116,8 +116,8 @@ def dashboard():
         
         return render_template('dashboard.html',
                              total_students=total_students,
-                             high_risk_students=high_risk_students,
-                             attendance_rate=round(attendance_rate, 1),
+                             at_risk_students=high_risk_students,
+                             avg_attendance=round(attendance_rate, 1),
                              risk_stats=risk_stats,
                              recent_alerts=recent_alerts)
         
@@ -125,10 +125,60 @@ def dashboard():
         flash(f'Dashboard error: {str(e)}', 'danger')
         return render_template('dashboard.html',
                              total_students=0,
-                             high_risk_students=0,
-                             attendance_rate=0,
+                             at_risk_students=0,
+                             avg_attendance=0,
                              risk_stats={'low': 0, 'medium': 0, 'high': 0, 'critical': 0},
                              recent_alerts=[])
+
+@main_bp.route('/add_student', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def add_student():
+    if request.method == 'POST':
+        student_id = request.form.get('student_id')
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        email = request.form.get('email')
+        phone = request.form.get('phone')
+        semester = request.form.get('semester')
+        
+        # Check if student already exists
+        if Student.query.filter_by(student_id=student_id).first():
+            flash('Student ID already exists.', 'danger')
+            return redirect(url_for('main.add_student'))
+        
+        if Student.query.filter_by(email=email).first():
+            flash('Email already exists.', 'danger')
+            return redirect(url_for('main.add_student'))
+            
+        new_student = Student(
+            student_id=student_id,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            phone=phone,
+            semester=semester,
+            enrollment_date=datetime.utcnow()
+        )
+        
+        db.session.add(new_student)
+        db.session.commit()
+        
+        # Initialize empty risk profile
+        risk_profile = RiskProfile(
+            student_id=new_student.id,
+            risk_score=0.0,
+            risk_level='Low',
+            attendance_rate=100.0,
+            academic_performance=100.0
+        )
+        db.session.add(risk_profile)
+        db.session.commit()
+        
+        flash('Student added successfully! You can now create a login for them.', 'success')
+        return redirect(url_for('main.students'))
+        
+    return render_template('add_student.html')
 
 @main_bp.route('/students')
 @login_required
@@ -263,7 +313,7 @@ def admin():
 @login_required
 @faculty_required
 def update_risk(student_id):
-    """Update student risk profile"""
+    """Update student risk profile based on real data"""
     try:
         student = Student.query.get_or_404(student_id)
         risk_profile = RiskProfile.query.filter_by(student_id=student_id).first()
@@ -272,37 +322,35 @@ def update_risk(student_id):
             risk_profile = RiskProfile(student_id=student_id)
             db.session.add(risk_profile)
         
-        # Calculate mock risk score
-        attendance_records = Attendance.query.filter_by(student_id=student_id).all()
-        if attendance_records:
-            attendance_rate = len([a for a in attendance_records if a.status == 'Present']) / len(attendance_records)
-        else:
-            attendance_rate = 0.5
+        # Update risk score using the holistic model method
+        risk_profile.update_risk_score()
         
-        # Mock risk calculation
-        risk_score = (1 - attendance_rate) * 100 + random.uniform(-10, 10)
-        risk_score = max(0, min(100, risk_score))
-        
-        if risk_score < 30:
-            risk_level = 'Low'
-        elif risk_score < 60:
-            risk_level = 'Medium'
-        elif risk_score < 80:
-            risk_level = 'High'
-        else:
-            risk_level = 'Critical'
-        
-        risk_profile.risk_score = risk_score
-        risk_profile.risk_level = risk_level
-        risk_profile.attendance_rate = attendance_rate * 100
-        risk_profile.last_updated = datetime.utcnow()
+        # Generate Alert if High or Critical
+        if risk_profile.risk_level in ['High', 'Critical']:
+            # Check if active alert already exists
+            existing_alert = Alert.query.filter_by(
+                student_id=student_id, 
+                status='Active',
+                alert_type='Risk Level'
+            ).first()
+            
+            if not existing_alert:
+                new_alert = Alert(
+                    student_id=student_id,
+                    alert_type='Risk Level',
+                    severity=risk_profile.risk_level,
+                    title=f'{risk_profile.risk_level} Risk Detected',
+                    description=f'Student risk score reached {risk_profile.risk_score:.1f}. Factors: Academic={risk_profile.academic_performance}%, Attendance={risk_profile.attendance_rate}%',
+                    status='Active'
+                )
+                db.session.add(new_alert)
         
         db.session.commit()
         
         return jsonify({
             'success': True,
-            'risk_score': round(risk_score, 1),
-            'risk_level': risk_level
+            'risk_score': round(risk_profile.risk_score, 1),
+            'risk_level': risk_profile.risk_level
         })
         
     except Exception as e:

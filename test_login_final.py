@@ -1,61 +1,34 @@
-"""
-Test Login Functionality
-"""
+from app import create_app
+from models import User
+import sys
 
-import requests
-import json
-
-def test_login():
-    """Test admin login"""
-    
-    # Test admin login
-    login_data = {
-        'email': 'admin@university.edu',
-        'password': 'admin123'
-    }
-    
-    try:
-        # Create a session to maintain cookies
-        session = requests.Session()
-        
-        # Get login page first
-        response = session.get('http://127.0.0.1:5000/login')
-        print(f"📄 Login page status: {response.status_code}")
-        
-        # Test login
-        response = session.post('http://127.0.0.1:5000/login', data=login_data)
-        
-        print(f"🔐 Login Test Results:")
-        print(f"   Status Code: {response.status_code}")
-        
-        if response.status_code == 302:
-            print(f"   ✅ Login successful!")
-            print(f"   Redirect Location: {response.headers.get('Location')}")
-            
-            # Follow redirect
-            dashboard_response = session.get('http://127.0.0.1:5000')
-            print(f"   Dashboard status: {dashboard_response.status_code}")
-            
-            if dashboard_response.status_code == 200:
-                print(f"   ✅ Successfully accessed dashboard!")
-                if 'EduGuard' in dashboard_response.text:
-                    print(f"   ✅ Dashboard content loaded correctly!")
-                else:
-                    print(f"   ⚠️ Dashboard may not be loading correctly")
-            
-        elif response.status_code == 200:
-            print(f"   ❌ Login failed - staying on login page")
-            if 'Invalid email or password' in response.text:
-                print(f"   ❌ Authentication failed")
-            else:
-                print(f"   ⚠️ Unexpected response")
+def verify_login():
+    app = create_app()
+    with app.app_context():
+        # Test Admin
+        user = User.query.filter_by(email='admin@eduguard.edu').first()
+        if user and user.check_password('admin123'):
+            print("✅ Admin login verification SUCCESS")
         else:
-            print(f"   ❌ Unexpected status code: {response.status_code}")
-            
-    except requests.exceptions.ConnectionError:
-        print("❌ Cannot connect to the application. Make sure it's running on http://127.0.0.1:5000")
-    except Exception as e:
-        print(f"❌ Error testing login: {e}")
+            print("❌ Admin login verification FAILED")
+            if user:
+                print(f"   User found, password hash: {user.password_hash[:20]}...")
+            else:
+                print("   User not found")
 
-if __name__ == '__main__':
-    test_login()
+        # Test Faculty
+        user = User.query.filter_by(email='faculty@eduguard.edu').first()
+        if user and user.check_password('faculty123'):
+            print("✅ Faculty login verification SUCCESS")
+        else:
+            print("❌ Faculty login verification FAILED")
+
+        # Test Student
+        user = User.query.filter_by(email='john.doe@eduguard.edu').first()
+        if user and user.check_password('student123'):
+            print("✅ Student login verification SUCCESS")
+        else:
+            print("❌ Student login verification FAILED")
+
+if __name__ == "__main__":
+    verify_login()

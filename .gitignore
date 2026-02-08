@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+instance/eduguard_working.db
+*.db-journal

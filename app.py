@@ -3,7 +3,7 @@ EduGuard Application
 Clean, production-ready Flask application
 """
 
-from flask import Flask
+from flask import Flask, render_template
 from flask_login import LoginManager
 from flask_mail import Mail
 from config import config
@@ -71,9 +71,10 @@ def create_app(config_name='default'):
 # Create app instance for direct running
 def create_initial_data():
     """Create initial data for the application"""
-    from models import User, Student, Attendance, RiskProfile
+    from models import User, Student, Attendance, RiskProfile, db
     from datetime import date, timedelta
     import hashlib
+    import random
     
     try:
         # Check if admin user exists
@@ -84,7 +85,7 @@ def create_initial_data():
                 email='admin@eduguard.edu',
                 role='admin'
             )
-            admin.password_hash = hashlib.sha256('admin123'.encode()).hexdigest()
+            admin.set_password('admin123')
             db.session.add(admin)
             print("✅ Created admin user")
         
@@ -96,7 +97,7 @@ def create_initial_data():
                 email='faculty@eduguard.edu',
                 role='faculty'
             )
-            faculty.password_hash = hashlib.sha256('faculty123'.encode()).hexdigest()
+            faculty.set_password('faculty123')
             db.session.add(faculty)
             print("✅ Created faculty user")
         
@@ -117,7 +118,7 @@ def create_initial_data():
                     email=email,
                     role='student'
                 )
-                student_user.password_hash = hashlib.sha256('student123'.encode()).hexdigest()
+                student_user.set_password('student123')
                 db.session.add(student_user)
                 db.session.flush()  # Get the user ID
                 
@@ -133,19 +134,34 @@ def create_initial_data():
                     semester=1,
                     gpa=3.5,
                     enrollment_date=date(2022, 9, 1),
-                    credits_completed=60
+                    credits_completed=60,
+                    parent_name=f"Parent of {first_name}",
+                    parent_email=f"parent.{first_name.lower()}@example.com",
+                    parent_phone="555-0100"
                 )
                 db.session.add(student)
                 db.session.flush()  # Get the student ID
                 
-                # Create risk profile
+                # Create risk profile with random holistic factors
+                financial = random.choice([True, False, False, False])
+                family = random.choice([True, False, False, False])
+                health = random.choice([True, False, False, False])
+                isolation = random.choice([True, False, False, False])
+                mental_score = random.randint(4, 10)
+                
                 risk_profile = RiskProfile(
                     student_id=student.id,
-                    risk_score=25.0,
-                    risk_level='Low',
                     attendance_rate=85.0,
-                    academic_performance=75.0
+                    academic_performance=75.0,
+                    financial_issues=financial,
+                    family_problems=family,
+                    health_issues=health,
+                    social_isolation=isolation,
+                    mental_wellbeing_score=mental_score
                 )
+                # Calculate initial risk score
+                risk_profile.update_risk_score()
+                
                 db.session.add(risk_profile)
                 
                 # Create sample attendance records

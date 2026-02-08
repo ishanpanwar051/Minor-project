@@ -29,11 +29,7 @@ class User(UserMixin, db.Model):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        try:
-            return check_password_hash(self.password_hash, password)
-        except:
-            simple_hash = hashlib.sha256(password.encode()).hexdigest()
-            return self.password_hash == simple_hash
+        return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
         return f'<User {self.email}>'
@@ -54,6 +50,11 @@ class Student(db.Model):
     gpa = db.Column(db.Float)
     enrollment_date = db.Column(db.Date)
     credits_completed = db.Column(db.Integer, default=0)
+    
+    # Parent/Guardian Info
+    parent_name = db.Column(db.String(100))
+    parent_email = db.Column(db.String(120))
+    parent_phone = db.Column(db.String(20))
     
     # Relationships
     attendance_records = db.relationship('Attendance', backref='student', lazy=True)
@@ -87,12 +88,62 @@ class RiskProfile(db.Model):
     risk_level = db.Column(db.String(20), default='Low')  # Low, Medium, High, Critical
     attendance_rate = db.Column(db.Float, default=0.0)
     academic_performance = db.Column(db.Float, default=0.0)
+    
+    # Holistic Risk Factors
+    financial_issues = db.Column(db.Boolean, default=False)
+    family_problems = db.Column(db.Boolean, default=False)
+    health_issues = db.Column(db.Boolean, default=False)
+    social_isolation = db.Column(db.Boolean, default=False)
+    mental_wellbeing_score = db.Column(db.Float, default=10.0) # 0-10 scale, 10 is best
+    
     last_updated = db.Column(db.DateTime, default=datetime.utcnow)
     
     # ML prediction fields
     ml_prediction = db.Column(db.Float)
     ml_confidence = db.Column(db.Float)
     ml_features = db.Column(db.Text)
+    
+    def update_risk_score(self):
+        """
+        Calculate risk score based on holistic factors:
+        - Academic Performance (30%)
+        - Attendance Rate (30%)
+        - Personal Factors (40%)
+        """
+        # 1. Academic Risk (Inverse of performance)
+        academic_risk = max(0, 100 - self.academic_performance) * 0.3
+        
+        # 2. Attendance Risk (Inverse of attendance)
+        attendance_risk = max(0, 100 - self.attendance_rate) * 0.3
+        
+        # 3. Personal Factors Risk
+        personal_risk = 0
+        if self.financial_issues: personal_risk += 15
+        if self.family_problems: personal_risk += 15
+        if self.health_issues: personal_risk += 15
+        if self.social_isolation: personal_risk += 10
+        
+        # Mental wellbeing (inverse: lower score = higher risk)
+        # Score 0-10, so (10-score)*2 adds up to 20 points
+        personal_risk += (10 - self.mental_wellbeing_score) * 2
+        
+        # Cap personal risk contribution
+        personal_risk = min(40, personal_risk)
+        
+        # Total Score
+        self.risk_score = academic_risk + attendance_risk + personal_risk
+        
+        # Determine Level
+        if self.risk_score >= 70:
+            self.risk_level = 'Critical'
+        elif self.risk_score >= 50:
+            self.risk_level = 'High'
+        elif self.risk_score >= 30:
+            self.risk_level = 'Medium'
+        else:
+            self.risk_level = 'Low'
+            
+        self.last_updated = datetime.utcnow()
     
     def __repr__(self):
         return f'<RiskProfile {self.student_id} - {self.risk_level}>'
