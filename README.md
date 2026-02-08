@@ -1,88 +1,102 @@
-# EduGuard - Student Dropout Prevention System
+# EduGuard – Student Dropout Prevention System
 
-## Project Overview
-EduGuard is an intelligent, data-driven web application designed to reduce student dropout rates. It monitors attendance and academic performance, identifies students at risk using a weighted rule-based algorithm, and provides early warning alerts to educators.
+## Core Purpose
+Help institutions detect at-risk students early and provide personalized support to prevent dropouts. This is a holistic Student Dropout Prevention Platform — not just attendance classification.
 
-## Features
-- **Dashboard:** Real-time overview of student statistics and risk distribution.
-- **Risk Analysis:** Automated calculation of risk levels (Low, Medium, High) based on attendance and grades.
-- **Student Profiles:** Detailed view of student history, including attendance logs and academic records.
-- **Intervention Tracking:** Log and track counseling sessions or parent meetings.
-- **Analytics:** Visual reports using Chart.js.
+## Main Features
+
+### 1. Student Profile
+- Name
+- Attendance %
+- Marks
+- Family Pressure (Low/Medium/High)
+- Financial Condition (Low/Medium/High)
+- Health / Accident (Yes/No)
+- Mental Stress Level
+- Parent Name
+- Parent Contact
+
+### 2. Dropout Risk Prediction (Rule-Based AI)
+Calculates risk using combined academic and personal factors:
+- Attendance < 75
+- Marks < 40
+- Financial condition = Low
+- Family pressure = High
+- Health issue = Yes
+
+Risk Levels: High / Medium / Low  
+Also displays WHY the student is at risk (reasons list).
+
+### 3. AI Driven Early Warning System
+Dashboard shows:
+- ⚠ Student at Risk of Dropout
+- ⚠ Early Intervention Required
+Highlights high-risk students in RED and suggests interventions.
+
+### 4. Academic Challenges Module
+Tracks:
+- Poor grades
+- Attendance issues
+- Motivation loss
+- Time management
+- Subject difficulty
+- Language barriers
+- Technology access
+
+### 5. Personal & Social Challenges Module
+Tracks:
+- Family problems
+- Financial stress
+- Mental health
+- Health issues / accidents
+- Bullying / isolation
+- Peer pressure
+- Cultural adjustment
+- Work-study balance
+
+### 6. Personalized Support System
+Provides:
+- Counseling sessions
+- Academic tutoring
+- Mentorship programs
+- Flexible learning schedules
+- Career guidance
+- Mental health resources
+
+### 7. Parent & Community Involvement
+Shows parent name and contact.  
+Message: “Parent notified for academic support”
+
+### 8. Prevention Strategies
+- Strong student-educator relationships
+- Inclusive environment
+- Flexible learning paths
+- Career guidance
+- Peer networks
+- Confidence building
+- Celebrate small achievements
+
+### 9. Dashboard UI
+Modern website with:
+- Student cards
+- Risk color coding: Red = High, Yellow = Medium, Green = Low
+- Early Warning Panel
+- Support suggestions
+
+### 10. About
+Explains academic, personal, and social challenges; early detection; and personalized support.  
+Aligned with NEP 2020 goals of reducing dropout rates and ensuring retention till secondary education.
 
 ## Tech Stack
-- **Backend:** Python Flask
-- **Database:** SQLite (SQLAlchemy ORM)
-- **Frontend:** HTML5, Bootstrap 5, Jinja2
-- **Visualization:** Chart.js
+- Backend: Flask
+- Database: SQLite (SQLAlchemy)
+- Frontend: Bootstrap 5, Jinja2
+- Visualization: Chart.js
 
-## 🔐 Authentication & User Management
-The system uses a **Closed Registration** model for security (typical for internal college/university systems).
-
-### 1. How Users Get Access
-Users **cannot** sign up themselves. An **Admin** must create accounts for them.
-1.  Log in as Admin (`admin@college.edu` / `password`).
-2.  Go to **Create User** (in the sidebar).
-3.  Enter the user's details and assign a role (`faculty`, `student`, `admin`).
-
-### 2. Login Logic
-- **Faculty/Admins:** Log in with their credentials to access the main dashboard.
-- **Students:** 
-  - Must have a User account created with the **same email** as their Student record.
-  - Upon login, they are redirected to their personal `My Profile` page.
-- **Unregistered Users:** If an email/password is not in the database, login is **denied** with an error message.
-
-## 🛠 Project Structure
-```
-/student-dropout-prevention
-  ├── app.py                 # Main application entry point
-  ├── models.py              # Database models (User, Student, Attendance, etc.)
-  ├── routes.py              # Route definitions and controllers
-  ├── utils.py               # Risk calculation logic
-  ├── config.py              # Configuration settings
-  ├── seed_data.py           # Script to populate database with dummy data
-  ├── requirements.txt       # Python dependencies
-  ├── static/                # CSS, JS, Images
-  └── templates/             # HTML Templates
+## Run Locally
+```bash
+pip install -r requirements_ews.txt
+python run.py
 ```
 
-## Setup Instructions
-
-1. **Install Dependencies**
-   Ensure you have Python installed. Run:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **Initialize Database**
-   Run the seeder script to create the database and populate it with sample data:
-   ```bash
-   python seed_data.py
-   ```
-
-3. **Run the Application**
-   ```bash
-   python app.py
-   ```
-
-4. **Access the System**
-   Open your browser and go to: `http://127.0.0.1:5000`
-   
-   **Login Credentials:**
-   - Email: `admin@college.edu`
-   - Password: `password`
-
-## Risk Calculation Logic (Viva Explanation)
-The system uses a weighted algorithm to determine the Risk Score (0-100):
-- **Attendance Weight (60%):** Low attendance significantly increases risk.
-- **Academic Weight (40%):** Low grades contribute to risk.
-- **Critical Failure:** If attendance drops below 60%, the student is automatically flagged as **High Risk**.
-
-Formula:
-`RiskScore = (AttendanceRisk * 0.6) + (AcademicRisk * 0.4)`
-Where Risk is inverted percentage (100 - Actual%).
-
-## Future Scope
-- Integration with Machine Learning models (Scikit-Learn) for predictive analysis.
-- SMS/Email notifications for parents.
-- Mobile App for students.
+Open http://127.0.0.1:5000 and log in with the seeded demo accounts.

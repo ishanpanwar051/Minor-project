@@ -88,6 +88,7 @@ class RiskProfile(db.Model):
     risk_level = db.Column(db.String(20), default='Low')  # Low, Medium, High, Critical
     attendance_rate = db.Column(db.Float, default=0.0)
     academic_performance = db.Column(db.Float, default=0.0)
+    risk_reasons = db.Column(db.Text)  # Comma-separated reasons for rule-based assessment
     
     # Holistic Risk Factors
     financial_issues = db.Column(db.Boolean, default=False)
@@ -105,44 +106,70 @@ class RiskProfile(db.Model):
     
     def update_risk_score(self):
         """
-        Calculate risk score based on holistic factors:
+        Calculate risk score (weighted) and determine risk level and reasons (rule-based).
+        Weighted model:
         - Academic Performance (30%)
         - Attendance Rate (30%)
         - Personal Factors (40%)
+        Rule-based reasons:
+        - Attendance < 75
+        - Marks < 40
+        - Financial condition = Low (financial_issues)
+        - Family pressure = High (family_problems)
+        - Health issue = Yes (health_issues)
+        - Mental stress (mental_wellbeing_score <= 4)
         """
-        # 1. Academic Risk (Inverse of performance)
-        academic_risk = max(0, 100 - self.academic_performance) * 0.3
-        
-        # 2. Attendance Risk (Inverse of attendance)
-        attendance_risk = max(0, 100 - self.attendance_rate) * 0.3
-        
-        # 3. Personal Factors Risk
+        # Weighted score components (inverse risks)
+        academic_risk = max(0, 100 - (self.academic_performance or 0)) * 0.3
+        attendance_risk = max(0, 100 - (self.attendance_rate or 0)) * 0.3
         personal_risk = 0
         if self.financial_issues: personal_risk += 15
         if self.family_problems: personal_risk += 15
         if self.health_issues: personal_risk += 15
         if self.social_isolation: personal_risk += 10
-        
-        # Mental wellbeing (inverse: lower score = higher risk)
-        # Score 0-10, so (10-score)*2 adds up to 20 points
-        personal_risk += (10 - self.mental_wellbeing_score) * 2
-        
-        # Cap personal risk contribution
+        personal_risk += max(0, (10 - (self.mental_wellbeing_score or 10))) * 2
         personal_risk = min(40, personal_risk)
-        
-        # Total Score
         self.risk_score = academic_risk + attendance_risk + personal_risk
         
-        # Determine Level
-        if self.risk_score >= 70:
-            self.risk_level = 'Critical'
-        elif self.risk_score >= 50:
+        # Rule-based reasons
+        reasons = []
+        if (self.attendance_rate or 0) < 75:
+            reasons.append('Low attendance (<75%)')
+        if (self.academic_performance or 0) < 40:
+            reasons.append('Poor marks (<40)')
+        if self.financial_issues:
+            reasons.append('Financial condition: Low')
+        if self.family_problems:
+            reasons.append('Family pressure: High')
+        if self.health_issues:
+            reasons.append('Health issue present')
+        if (self.mental_wellbeing_score or 10) <= 4:
+            reasons.append('High mental stress')
+        self.risk_reasons = ', '.join(reasons) if reasons else 'No significant risk factors detected'
+        
+        # Rule-based level
+        personal_flags = sum([
+            1 if self.financial_issues else 0,
+            1 if self.family_problems else 0,
+            1 if self.health_issues else 0,
+            1 if self.social_isolation else 0,
+            1 if (self.mental_wellbeing_score or 10) <= 4 else 0
+        ])
+        academic_flags = int((self.academic_performance or 0) < 40)
+        attendance_flags = int((self.attendance_rate or 0) < 75)
+        
+        if ((self.attendance_rate or 0) < 60) or ((self.academic_performance or 0) < 30):
+            if personal_flags >= 2:
+                self.risk_level = 'Critical'
+            else:
+                self.risk_level = 'High'
+        elif (academic_flags + attendance_flags >= 2) or ((academic_flags + personal_flags) >= 2):
             self.risk_level = 'High'
-        elif self.risk_score >= 30:
+        elif (academic_flags + attendance_flags + personal_flags) >= 1:
             self.risk_level = 'Medium'
         else:
             self.risk_level = 'Low'
-            
+        
         self.last_updated = datetime.utcnow()
     
     def __repr__(self):

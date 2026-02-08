@@ -107,6 +107,24 @@
             </div>
         </div>
 
+        <!-- Rule-Based Risk Reasons -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-list"></i> Dropout Risk Prediction (Rule-Based)</h5>
+            </div>
+            <div class="card-body">
+                {% if risk_profile and risk_profile.risk_reasons %}
+                    <ul class="list-group list-group-flush">
+                        {% for reason in risk_profile.risk_reasons.split(',') %}
+                            <li class="list-group-item">{{ reason.strip() }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">No significant risk factors detected.</p>
+                {% endif %}
+            </div>
+        </div>
+
         <!-- Parent/Guardian Info -->
         <div class="card mb-4">
             <div class="card-header">
@@ -131,6 +149,7 @@
                 </dl>
                 <div class="d-grid gap-2 mt-3">
                     <button class="btn btn-outline-primary btn-sm"><i class="fas fa-comment-dots"></i> Send Update</button>
+                    <small class="text-muted">Parent notified for academic support</small>
                 </div>
             </div>
         </div>
@@ -227,6 +246,34 @@
                 {% else %}
                     <p class="text-muted text-center mb-0">No counselling sessions recorded.</p>
                 {% endif %}
+            </div>
+        </div>
+
+        <!-- Personalized Support Suggestions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Personalized Support Suggestions</h5>
+            </div>
+            <div class="card-body">
+                {% set level = risk_profile.risk_level if risk_profile else 'Low' %}
+                <ul class="list-group list-group-flush">
+                    {% if level in ['High','Critical'] %}
+                        <li class="list-group-item">Counseling sessions for emotional and family issues</li>
+                        <li class="list-group-item">Academic tutoring and study groups</li>
+                        <li class="list-group-item">Assign mentorship program</li>
+                        <li class="list-group-item">Flexible learning schedules</li>
+                        <li class="list-group-item">Career guidance session</li>
+                        <li class="list-group-item">Mental health resources and confidence-building workshops</li>
+                    {% elif level == 'Medium' %}
+                        <li class="list-group-item">Mentorship and guided study plan</li>
+                        <li class="list-group-item">Periodic counseling check-ins</li>
+                        <li class="list-group-item">Time management and motivation support</li>
+                    {% else %}
+                        <li class="list-group-item">Peer networks and community involvement</li>
+                        <li class="list-group-item">Celebrate small achievements</li>
+                        <li class="list-group-item">Maintain inclusive, supportive environment</li>
+                    {% endif %}
+                </ul>
             </div>
         </div>
     </div>

@@ -101,6 +101,17 @@ def dashboard():
         
         high_risk_students = risk_stats['high'] + risk_stats['critical']
         
+        # Top risky students for cards (sorted: Critical/High then score)
+        risky_students = Student.query.join(RiskProfile).order_by(
+            db.case(
+                (RiskProfile.risk_level == 'Critical', 0),
+                (RiskProfile.risk_level == 'High', 1),
+                (RiskProfile.risk_level == 'Medium', 2),
+                else_=3
+            ),
+            RiskProfile.risk_score.desc()
+        ).limit(8).all()
+        
         # Calculate attendance rate
         recent_attendance = Attendance.query.filter(
             Attendance.date >= date.today() - timedelta(days=30)
@@ -119,7 +130,8 @@ def dashboard():
                              at_risk_students=high_risk_students,
                              avg_attendance=round(attendance_rate, 1),
                              risk_stats=risk_stats,
-                             recent_alerts=recent_alerts)
+                             recent_alerts=recent_alerts,
+                             risky_students=risky_students)
         
     except Exception as e:
         flash(f'Dashboard error: {str(e)}', 'danger')
@@ -350,8 +362,36 @@ def update_risk(student_id):
         return jsonify({
             'success': True,
             'risk_score': round(risk_profile.risk_score, 1),
-            'risk_level': risk_profile.risk_level
+            'risk_level': risk_profile.risk_level,
+            'reasons': risk_profile.risk_reasons
         })
         
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@main_bp.route('/api/auto_update_risk_all')
+@login_required
+@faculty_required
+def auto_update_risk_all():
+    try:
+        students = Student.query.all()
+        summary = {'updated': 0, 'low': 0, 'medium': 0, 'high': 0, 'critical': 0}
+        for s in students:
+            rp = RiskProfile.query.filter_by(student_id=s.id).first()
+            if not rp:
+                rp = RiskProfile(student_id=s.id)
+                db.session.add(rp)
+            rp.update_risk_score()
+            summary['updated'] += 1
+            if rp.risk_level == 'Low':
+                summary['low'] += 1
+            elif rp.risk_level == 'Medium':
+                summary['medium'] += 1
+            elif rp.risk_level == 'High':
+                summary['high'] += 1
+            elif rp.risk_level == 'Critical':
+                summary['critical'] += 1
+        db.session.commit()
+        return jsonify({'success': True, 'summary': summary})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})

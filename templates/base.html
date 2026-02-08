@@ -75,14 +75,14 @@
                     <a href="{{ url_for('main.students') }}" class="nav-link {% if request.endpoint == 'main.students' %}active{% endif %}">
                         <i class="fas fa-users"></i> Students
                     </a>
-                    <a href="#" class="nav-link">
+                    <a href="{{ url_for('main.attendance') }}" class="nav-link {% if request.endpoint == 'main.attendance' %}active{% endif %}">
                         <i class="fas fa-calendar-check"></i> Attendance
                     </a>
-                    <a href="#" class="nav-link">
+                    <a href="{{ url_for('main.risk') }}" class="nav-link {% if request.endpoint == 'main.risk' %}active{% endif %}">
                         <i class="fas fa-exclamation-triangle"></i> Risk Analysis
                     </a>
                     {% if current_user.role == 'admin' %}
-                    <a href="#" class="nav-link">
+                    <a href="{{ url_for('main.admin') }}" class="nav-link {% if request.endpoint == 'main.admin' %}active{% endif %}">
                         <i class="fas fa-cog"></i> Admin
                     </a>
                     {% endif %}
