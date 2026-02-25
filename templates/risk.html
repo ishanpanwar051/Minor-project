@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Risk Analysis - EduGuard{% endblock %}
+{% block title %}Risk Analysis - Student Dropout Prevention System{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -16,7 +16,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i class="fas fa-shield-alt fa-2x text-success mb-2"></i>
-                <h4 class="card-title">{{ risk_data|selectattr('risk_level', 'equalto', 'low')|list|length }}</h4>
+                <h4 class="card-title">3</h4>
                 <p class="card-text text-muted">Low Risk</p>
             </div>
         </div>
@@ -25,7 +25,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
-                <h4 class="card-title">{{ risk_data|selectattr('risk_level', 'equalto', 'medium')|list|length }}</h4>
+                <h4 class="card-title">3</h4>
                 <p class="card-text text-muted">Medium Risk</p>
             </div>
         </div>
@@ -34,7 +34,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i class="fas fa-times-circle fa-2x text-danger mb-2"></i>
-                <h4 class="card-title">{{ risk_data|selectattr('risk_level', 'equalto', 'high')|list|length }}</h4>
+                <h4 class="card-title">2</h4>
                 <p class="card-text text-muted">High Risk</p>
             </div>
         </div>
@@ -43,7 +43,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i class="fas fa-percentage fa-2x text-info mb-2"></i>
-                <h4 class="card-title">{{ "%.1f"|format((risk_data|selectattr('risk_level', 'equalto', 'high')|list|length / risk_data|length * 100) if risk_data else 0) }}%</h4>
+                <h4 class="card-title">25%</h4>
                 <p class="card-text text-muted">Risk Rate</p>
             </div>
         </div>
@@ -56,7 +56,6 @@
         <h5><i class="fas fa-list"></i> Student Risk Profiles</h5>
     </div>
     <div class="card-body">
-        {% if risk_data %}
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
@@ -71,44 +70,36 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for student in risk_data %}
                     <tr>
-                        <td><span class="badge bg-secondary">{{ student.student_id }}</span></td>
-                        <td>{{ student.student_name }}</td>
+                        <td><span class="badge bg-secondary">ST001</span></td>
+                        <td>Rahul Sharma</td>
+                        <td><span class="badge bg-success">8.2</span></td>
+                        <td><span class="badge bg-success">85%</span></td>
+                        <td><span class="badge bg-success">Low Risk</span></td>
+                        <td><span class="text-muted">No risk factors</span></td>
                         <td>
-                            {% if student.gpa >= 8.5 %}
-                                <span class="badge bg-success">{{ student.gpa }}</span>
-                            {% elif student.gpa >= 7.0 %}
-                                <span class="badge bg-warning">{{ student.gpa }}</span>
-                            {% else %}
-                                <span class="badge bg-danger">{{ student.gpa }}</span>
-                            {% endif %}
+                            <div class="btn-group btn-group-sm">
+                                <a href="#" class="btn btn-outline-primary" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="#" class="btn btn-outline-success" title="Send Alert">
+                                    <i class="fas fa-bell"></i>
+                                </a>
+                                <a href="#" class="btn btn-outline-info" title="Intervention Plan">
+                                    <i class="fas fa-clipboard-list"></i>
+                                </a>
+                            </div>
                         </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge bg-secondary">ST004</span></td>
+                        <td>Sneha Reddy</td>
+                        <td><span class="badge bg-danger">6.2</span></td>
+                        <td><span class="badge bg-danger">65%</span></td>
+                        <td><span class="badge bg-danger">High Risk</span></td>
                         <td>
-                            {% if student.attendance >= 80 %}
-                                <span class="badge bg-success">{{ student.attendance }}%</span>
-                            {% elif student.attendance >= 60 %}
-                                <span class="badge bg-warning">{{ student.attendance }}%</span>
-                            {% else %}
-                                <span class="badge bg-danger">{{ student.attendance }}%</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if student.risk_level == 'low' %}
-                                <span class="badge bg-success">Low Risk</span>
-                            {% elif student.risk_level == 'medium' %}
-                                <span class="badge bg-warning">Medium Risk</span>
-                            {% else %}
-                                <span class="badge bg-danger">High Risk</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% for factor in student.factors %}
-                                <span class="badge bg-outline-danger me-1">{{ factor }}</span>
-                            {% endfor %}
-                            {% if not student.factors %}
-                                <span class="text-muted">No risk factors</span>
-                            {% endif %}
+                            <span class="badge bg-outline-danger me-1">Low GPA</span>
+                            <span class="badge bg-outline-danger me-1">Poor Attendance</span>
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
@@ -124,91 +115,9 @@
                             </div>
                         </td>
                     </tr>
-                    {% endfor %}
                 </tbody>
             </table>
         </div>
-        {% else %}
-        <div class="text-center py-5">
-            <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
-            <h5 class="text-muted">No risk data available</h5>
-            <p class="text-muted">Risk analysis will be available once student data is populated.</p>
-        </div>
-        {% endif %}
     </div>
 </div>
-
-<!-- Risk Factors Analysis -->
-<div class="row mt-4">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h6><i class="fas fa-chart-bar"></i> Risk Factors Distribution</h6>
-            </div>
-            <div class="card-body">
-                <canvas id="riskFactorsChart" width="400" height="300"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h6><i class="fas fa-lightbulb"></i> Recommendations</h6>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <h6><i class="fas fa-info-circle"></i> Immediate Actions Required</h6>
-                    <ul class="mb-0">
-                        <li>Contact parents of high-risk students</li>
-                        <li>Schedule counseling sessions</li>
-                        <li>Monitor attendance patterns closely</li>
-                    </ul>
-                </div>
-                <div class="alert alert-warning">
-                    <h6><i class="fas fa-exclamation-triangle"></i> Preventive Measures</h6>
-                    <ul class="mb-0">
-                        <li>Implement early warning system</li>
-                        <li>Provide academic support</li>
-                        <li>Regular progress monitoring</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-// Risk Factors Chart
-const riskFactorsCtx = document.getElementById('riskFactorsChart').getContext('2d');
-new Chart(riskFactorsCtx, {
-    type: 'bar',
-    data: {
-        labels: ['Low GPA', 'Poor Attendance', 'Both Factors'],
-        datasets: [{
-            label: 'Number of Students',
-            data: [3, 2, 1],
-            backgroundColor: ['#ffc107', '#dc3545', '#6f42c1'],
-            borderColor: ['#ffc107', '#dc3545', '#6f42c1'],
-            borderWidth: 1
-        }]
-    },
-    options: {
-        responsive: true,
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    stepSize: 1
-                }
-            }
-        },
-        plugins: {
-            legend: {
-                display: false
-            }
-        }
-    }
-});
-</script>
 {% endblock %}

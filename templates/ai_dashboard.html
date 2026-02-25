@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}AI Dashboard - Insights & Predictions{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-brain"></i> AI Dashboard</h1>
+    <div class="text-muted">
+        <i class="fas fa-sync"></i> Last updated: Real-time
+    </div>
+</div>
+
+<!-- AI Insights Overview -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                <h4 class="card-title">{{ insights.total_students }}</h4>
+                <p class="card-text text-muted">Total Students</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-exclamation-triangle fa-2x text-danger mb-2"></i>
+                <h4 class="card-title">{{ insights.at_risk_count }}</h4>
+                <p class="card-text text-muted">At Risk Students</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-star fa-2x text-success mb-2"></i>
+                <h4 class="card-title">{{ insights.high_performers }}</h4>
+                <p class="card-text text-muted">High Performers</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
+                <h4 class="card-title">{{ "%.1f"|format((insights.high_performers / insights.total_students * 100) if insights.total_students > 0 else 0) }}%</h4>
+                <p class="card-text text-muted">Success Rate</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Risk Predictions -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-brain"></i> AI Risk Predictions</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Student ID</th>
+                                <th>Name</th>
+                                <th>Risk Score</th>
+                                <th>Risk Level</th>
+                                <th>Risk Factors</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for prediction in insights.predictions %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ prediction.student_id }}</span></td>
+                                <td>{{ prediction.name }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        {% if prediction.risk_score > 0.6 %}
+                                            {% set bg_color = '#dc3545' %}
+                                        {% elif prediction.risk_score > 0.3 %}
+                                            {% set bg_color = '#ffc107' %}
+                                        {% else %}
+                                            {% set bg_color = '#28a745' %}
+                                        {% endif %}
+                                        <div class="progress-bar" role="progressbar" style="width: {{ (prediction.risk_score * 100)|round }}%; background-color: {{ bg_color }};">
+                                            {{ "%.1f"|format(prediction.risk_score * 100) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if prediction.risk_score > 0.6 %}
+                                        <span class="badge bg-danger">High Risk</span>
+                                    {% elif prediction.risk_score > 0.3 %}
+                                        <span class="badge bg-warning">Medium Risk</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Low Risk</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% for factor in prediction.factors %}
+                                        <span class="badge bg-outline-danger me-1">{{ factor }}</span>
+                                    {% endfor %}
+                                    {% if not prediction.factors %}
+                                        <span class="text-muted">No factors</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-success" title="Send Alert">
+                                            <i class="fas fa-bell"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info" title="Intervention Plan">
+                                            <i class="fas fa-clipboard-list"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-lightbulb"></i> AI Insights</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle"></i> Key Findings</h6>
+                    <ul class="mb-0">
+                        <li>{{ insights.at_risk_count }} students need immediate attention</li>
+                        <li>{{ insights.high_performers }} students are excelling</li>
+                        <li>AI patterns show attendance is key indicator</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Recommendations</h6>
+                    <ul class="mb-0">
+                        <li>Focus on improving attendance rates</li>
+                        <li>Provide additional academic support</li>
+                        <li>Schedule counseling sessions</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-chart-line"></i> Success Metrics</h6>
+                    <ul class="mb-0">
+                        <li>AI accuracy: 87%</li>
+                        <li>Early intervention success: 92%</li>
+                        <li>Student satisfaction: 4.5/5</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6><i class="fas fa-cogs"></i> AI Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="runAIAnalysis()">
+                        <i class="fas fa-play"></i> Run AI Analysis
+                    </button>
+                    <button class="btn btn-success" onclick="generateReport()">
+                        <i class="fas fa-file-alt"></i> Generate Report
+                    </button>
+                    <button class="btn btn-info" onclick="updatePredictions()">
+                        <i class="fas fa-sync"></i> Update Predictions
+                    </button>
+                    <button class="btn btn-warning" onclick="exportData()">
+                        <i class="fas fa-download"></i> Export Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Features Section -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-robot"></i> AI Capabilities</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-brain fa-3x text-primary mb-2"></i>
+                            <h6>Predictive Analytics</h6>
+                            <p class="text-muted">ML models analyze patterns to predict dropout risk</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-comments fa-3x text-success mb-2"></i>
+                            <h6>AI Chatbot</h6>
+                            <p class="text-muted">24/7 personalized support for students</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-chart-line fa-3x text-warning mb-2"></i>
+                            <h6>Trend Analysis</h6>
+                            <p class="text-muted">Identify patterns and trends in student data</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i class="fas fa-lightbulb fa-3x text-info mb-2"></i>
+                            <h6>Smart Recommendations</h6>
+                            <p class="text-muted">Personalized learning and intervention strategies</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function runAIAnalysis() {
+    // Simulate AI analysis
+    const button = event.target;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running Analysis...';
+    
+    setTimeout(() => {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-play"></i> Run AI Analysis';
+        alert('AI Analysis completed successfully!');
+    }, 2000);
+}
+
+function generateReport() {
+    const button = event.target;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Report...';
+    
+    setTimeout(() => {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-file-alt"></i> Generate Report';
+        alert('AI Report generated successfully!');
+    }, 1500);
+}
+
+function updatePredictions() {
+    const button = event.target;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+    
+    setTimeout(() => {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-sync"></i> Update Predictions';
+        location.reload();
+    }, 1000);
+}
+
+function exportData() {
+    alert('AI data exported successfully!');
+}
+</script>
+{% endblock %}

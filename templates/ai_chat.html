@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}AI Assistant - Student Support{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-robot"></i> AI Assistant</h1>
+    <div class="text-muted">
+        <i class="fas fa-circle text-success"></i> Online 24/7
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-comments"></i> Chat with AI Assistant</h5>
+            </div>
+            <div class="card-body">
+                <div id="chatContainer" class="chat-container" style="height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; background: #f8f9fa;">
+                    <div class="chat-message ai-message mb-3">
+                        <div class="d-flex align-items-start">
+                            <div class="avatar bg-primary text-white rounded-circle p-2 me-2" style="width: 40px; height: 40px;">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="message-content">
+                                <div class="bg-light p-3 rounded">
+                                    <strong>AI Assistant:</strong><br>
+                                    Hello! I'm here to help you succeed in your studies. I can assist with:
+                                    <ul class="mb-0 mt-2">
+                                        <li>Study strategies and techniques</li>
+                                        <li>Time management and scheduling</li>
+                                        <li>Motivation and encouragement</li>
+                                        <li>Career guidance and planning</li>
+                                        <li>Personalized learning recommendations</li>
+                                    </ul>
+                                    How can I help you today?
+                                </div>
+                                <small class="text-muted">Just now</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-group mt-3">
+                    <input type="text" id="messageInput" class="form-control" placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
+                    <button class="btn btn-primary" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i> Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-lightbulb"></i> Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary btn-sm" onclick="sendQuickMessage('I need help with my studies')">
+                        <i class="fas fa-book"></i> Study Help
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" onclick="sendQuickMessage('I feel unmotivated')">
+                        <i class="fas fa-heart"></i> Get Motivation
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm" onclick="sendQuickMessage('Help me manage my time')">
+                        <i class="fas fa-clock"></i> Time Management
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" onclick="sendQuickMessage('Career advice needed')">
+                        <i class="fas fa-briefcase"></i> Career Guidance
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="sendQuickMessage('I feel overwhelmed')">
+                        <i class="fas fa-exclamation-triangle"></i> Stress Support
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6><i class="fas fa-info-circle"></i> AI Capabilities</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2"><i class="fas fa-check text-success"></i> 24/7 Availability</li>
+                    <li class="mb-2"><i class="fas fa-check text-success"></i> Personalized Responses</li>
+                    <li class="mb-2"><i class="fas fa-check text-success"></i> Study Strategies</li>
+                    <li class="mb-2"><i class="fas fa-check text-success"></i> Emotional Support</li>
+                    <li class="mb-2"><i class="fas fa-check text-success"></i> Career Guidance</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.chat-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.chat-message {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.user-message .avatar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.ai-message .avatar {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.message-content {
+    flex: 1;
+}
+
+.typing-indicator {
+    display: none;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin: 10px 0;
+}
+
+.typing-indicator.active {
+    display: block;
+}
+
+.typing-dots {
+    display: flex;
+    gap: 4px;
+}
+
+.typing-dots span {
+    width: 8px;
+    height: 8px;
+    background: #667eea;
+    border-radius: 50%;
+    animation: typing 1.4s infinite;
+}
+
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-10px); }
+}
+</style>
+
+<script>
+function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const message = input.value.trim();
+    
+    if (!message) return;
+    
+    const chatContainer = document.getElementById('chatContainer');
+    
+    // Add user message
+    const userMessageHtml = `
+        <div class="chat-message user-message mb-3">
+            <div class="d-flex align-items-start flex-row-reverse">
+                <div class="avatar text-white rounded-circle p-2 ms-2" style="width: 40px; height: 40px;">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="message-content">
+                    <div class="bg-primary text-white p-3 rounded">
+                        ${message}
+                    </div>
+                    <small class="text-muted">Just now</small>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    chatContainer.innerHTML += userMessageHtml;
+    input.value = '';
+    
+    // Show typing indicator
+    showTypingIndicator();
+    
+    // Send to server
+    fetch('/ai/chat_response', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `message=${encodeURIComponent(message)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideTypingIndicator();
+        addAiMessage(data.response, data.timestamp);
+    })
+    .catch(error => {
+        hideTypingIndicator();
+        addAiMessage("I'm having trouble responding right now. Please try again.", new Date().toISOString());
+    });
+    
+    // Scroll to bottom
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function sendQuickMessage(message) {
+    document.getElementById('messageInput').value = message;
+    sendMessage();
+}
+
+function addAiMessage(message, timestamp) {
+    const chatContainer = document.getElementById('chatContainer');
+    const time = new Date(timestamp).toLocaleTimeString();
+    
+    const aiMessageHtml = `
+        <div class="chat-message ai-message mb-3">
+            <div class="d-flex align-items-start">
+                <div class="avatar text-white rounded-circle p-2 me-2" style="width: 40px; height: 40px;">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message-content">
+                    <div class="bg-light p-3 rounded">
+                        <strong>AI Assistant:</strong><br>
+                        ${message}
+                    </div>
+                    <small class="text-muted">${time}</small>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    chatContainer.innerHTML += aiMessageHtml;
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function showTypingIndicator() {
+    const chatContainer = document.getElementById('chatContainer');
+    const typingHtml = `
+        <div id="typingIndicator" class="typing-indicator active">
+            <div class="d-flex align-items-start">
+                <div class="avatar text-white rounded-circle p-2 me-2" style="width: 40px; height: 40px;">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+    `;
+    chatContainer.innerHTML += typingHtml;
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function hideTypingIndicator() {
+    const indicator = document.getElementById('typingIndicator');
+    if (indicator) {
+        indicator.remove();
+    }
+}
+
+function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendMessage();
+    }
+}
+
+// Auto-focus on input
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('messageInput').focus();
+});
+</script>
+{% endblock %}
