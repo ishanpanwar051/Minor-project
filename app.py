@@ -1,19 +1,24 @@
 """
 EduGuard Application
-Clean, production-ready Flask application
+Clean, production-ready Flask application with real-time notifications
 """
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_login import LoginManager
 from flask_mail import Mail
 from config import config
 import os
 import logging
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Initialize extensions
 db = None
 login_manager = LoginManager()
 mail = Mail()
+socketio = None
 
 def create_app(config_name='default'):
     """Application factory"""
@@ -27,6 +32,15 @@ def create_app(config_name='default'):
     db.init_app(app)
     login_manager.init_app(app)
     mail.init_app(app)
+    
+    # Initialize real-time notifications
+    global socketio
+    try:
+        from realtime_notifications import init_realtime_notifications
+        socketio = init_realtime_notifications(app)
+    except ImportError:
+        logger.warning("Real-time notifications not available")
+        socketio = None
     
     # Configure login
     login_manager.login_view = 'main.login'
@@ -67,6 +81,41 @@ def create_app(config_name='default'):
             app.logger.error(f'Error creating database tables: {str(e)}')
     
     return app
+
+def run_app():
+    """Run the application with SocketIO if available"""
+    app = create_app(os.getenv('FLASK_CONFIG') or 'default')
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.DEBUG if app.config.get('DEBUG', False) else logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    # Create initial data
+    with app.app_context():
+        create_initial_data()
+    
+    print("\n🚀 EduGuard Enhanced Application Starting...")
+    print(f"🌐 Access at: http://127.0.0.1:5000")
+    print(f"🔧 Debug mode: {app.config.get('DEBUG', False)}")
+    print(f"🤖 ML Model: {'Enabled' if socketio else 'Disabled'}")
+    
+    if socketio:
+        # Run with SocketIO for real-time features
+        socketio.run(
+            app,
+            debug=app.config.get('DEBUG', False),
+            host='0.0.0.0',
+            port=5000
+        )
+    else:
+        # Run without SocketIO
+        app.run(
+            debug=app.config.get('DEBUG', False),
+            host='0.0.0.0',
+            port=5000
+        )
 
 # Create app instance for direct running
 def create_initial_data():
@@ -194,24 +243,4 @@ def create_initial_data():
             db.session.rollback()
 
 if __name__ == '__main__':
-    app = create_app(os.getenv('FLASK_CONFIG') or 'default')
-    
-    # Configure logging
-    logging.basicConfig(
-        level=logging.DEBUG if app.config.get('DEBUG', False) else logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    
-    # Create initial data
-    with app.app_context():
-        create_initial_data()
-    
-    print("\n🚀 EduGuard Application Starting...")
-    print(f"🌐 Access at: http://127.0.0.1:5000")
-    print(f"🔧 Debug mode: {app.config.get('DEBUG', False)}")
-    
-    app.run(
-        debug=app.config.get('DEBUG', False),
-        host='0.0.0.0',
-        port=5000
-    )
+    run_app()

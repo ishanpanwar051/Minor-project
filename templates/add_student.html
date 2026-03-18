@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Add Student - Student Dropout Prevention System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-user-plus"></i> Add New Student</h1>
+    <a href="/students" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Students
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-user-graduate"></i> Student Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="student_id" class="form-label">Student ID *</label>
+                            <input type="text" class="form-control" id="student_id" name="student_id" required>
+                            <div class="form-text">Unique student identifier (e.g., ST001)</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email Address *</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                            <div class="form-text">Student's institutional email</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="first_name" class="form-label">First Name *</label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="last_name" class="form-label">Last Name *</label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone" name="phone">
+                            <div class="form-text">Contact number</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="department" class="form-label">Department *</label>
+                            <select class="form-select" id="department" name="department" required>
+                                <option value="">Select Department</option>
+                                <option value="Computer Science">Computer Science</option>
+                                <option value="Engineering">Engineering</option>
+                                <option value="Business">Business</option>
+                                <option value="Arts">Arts</option>
+                                <option value="Science">Science</option>
+                                <option value="Medicine">Medicine</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="year" class="form-label">Year *</label>
+                            <select class="form-select" id="year" name="year" required>
+                                <option value="">Select Year</option>
+                                <option value="1">1st Year</option>
+                                <option value="2">2nd Year</option>
+                                <option value="3">3rd Year</option>
+                                <option value="4">4th Year</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="semester" class="form-label">Semester *</label>
+                            <select class="form-select" id="semester" name="semester" required>
+                                <option value="">Select Semester</option>
+                                <option value="1">Semester 1</option>
+                                <option value="2">Semester 2</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="gpa" class="form-label">GPA</label>
+                            <input type="number" class="form-control" id="gpa" name="gpa" step="0.1" min="0" max="10" value="7.5">
+                            <div class="form-text">Current GPA (0-10)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="parent_name" class="form-label">Parent/Guardian Name</label>
+                            <input type="text" class="form-control" id="parent_name" name="parent_name">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="parent_email" class="form-label">Parent Email</label>
+                            <input type="email" class="form-control" id="parent_email" name="parent_email">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="parent_phone" class="form-label">Parent Phone</label>
+                            <input type="tel" class="form-control" id="parent_phone" name="parent_phone">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="enrollment_date" class="form-label">Enrollment Date</label>
+                            <input type="date" class="form-control" id="enrollment_date" name="enrollment_date" value="{{ today_date }}">
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6><i class="fas fa-shield-alt"></i> Initial Risk Assessment</h6>
+                    <p class="text-muted mb-3">Help us understand the student's initial risk factors</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Financial Issues</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="financial_issues" id="financial_no" value="false" checked>
+                                <label class="form-check-label" for="financial_no">
+                                    No financial concerns
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="financial_issues" id="financial_yes" value="true">
+                                <label class="form-check-label" for="financial_yes">
+                                    Financial difficulties present
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Family Problems</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="family_problems" id="family_no" value="false" checked>
+                                <label class="form-check-label" for="family_no">
+                                    Stable family environment
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="family_problems" id="family_yes" value="true">
+                                <label class="form-check-label" for="family_yes">
+                                    Family issues present
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Health Issues</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="health_issues" id="health_no" value="false" checked>
+                                <label class="form-check-label" for="health_no">
+                                    No health concerns
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="health_issues" id="health_yes" value="true">
+                                <label class="form-check-label" for="health_yes">
+                                    Health issues present
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Social Isolation</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="social_isolation" id="social_no" value="false" checked>
+                                <label class="form-check-label" for="social_no">
+                                    Well socially integrated
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="social_isolation" id="social_yes" value="true">
+                                <label class="form-check-label" for="social_yes">
+                                    Socially isolated
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="mental_wellbeing" class="form-label">Mental Wellbeing Score (1-10)</label>
+                        <input type="range" class="form-range" id="mental_wellbeing" name="mental_wellbeing" min="1" max="10" value="8">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">1 (Poor)</small>
+                            <span id="mental_score" class="badge bg-primary">8</span>
+                            <small class="text-muted">10 (Excellent)</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="/students" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Add Student
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update mental wellbeing score display
+document.getElementById('mental_wellbeing').addEventListener('input', function(e) {
+    document.getElementById('mental_score').textContent = e.target.value;
+});
+
+// Set today's date as default
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('enrollment_date');
+    if (!dateInput.value) {
+        dateInput.value = today;
+    }
+});
+</script>
+{% endblock %}

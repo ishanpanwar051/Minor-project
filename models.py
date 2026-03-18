@@ -48,6 +48,7 @@ class Student(db.Model):
     year = db.Column(db.Integer)
     semester = db.Column(db.Integer)
     gpa = db.Column(db.Float)
+    behavior_score = db.Column(db.Float, default=7.0)  # 1-10 scale
     enrollment_date = db.Column(db.Date)
     credits_completed = db.Column(db.Integer, default=0)
     
@@ -104,21 +105,51 @@ class RiskProfile(db.Model):
     ml_confidence = db.Column(db.Float)
     ml_features = db.Column(db.Text)
     
-    def update_risk_score(self):
+    def update_risk_score(self, use_ml=True):
         """
-        Calculate risk score (weighted) and determine risk level and reasons (rule-based).
-        Weighted model:
-        - Academic Performance (30%)
-        - Attendance Rate (30%)
-        - Personal Factors (40%)
-        Rule-based reasons:
-        - Attendance < 75
-        - Marks < 40
-        - Financial condition = Low (financial_issues)
-        - Family pressure = High (family_problems)
-        - Health issue = Yes (health_issues)
-        - Mental stress (mental_wellbeing_score <= 4)
+        Enhanced risk calculation with ML integration
+        Combines rule-based and machine learning approaches
         """
+        try:
+            # Import here to avoid circular imports
+            from enhanced_ai_predictor import risk_predictor
+            
+            # Prepare student data for ML prediction
+            student_data = {
+                'gpa': self.student.gpa or 0,
+                'attendance_rate': self.attendance_rate or 0,
+                'academic_performance': self.academic_performance or 0,
+                'credits_completed': self.student.credits_completed or 0,
+                'year': self.student.year or 1,
+                'semester': self.student.semester or 1,
+                'financial_issues': self.financial_issues or False,
+                'family_problems': self.family_problems or False,
+                'health_issues': self.health_issues or False,
+                'social_isolation': self.social_isolation or False,
+                'mental_wellbeing_score': self.mental_wellbeing_score or 10
+            }
+            
+            if use_ml and risk_predictor.is_trained:
+                # Use ML prediction
+                prediction = risk_predictor.predict_risk(student_data)
+                self.risk_score = prediction['risk_score']
+                self.risk_level = prediction['risk_level']
+                self.ml_prediction = prediction['risk_score']
+                self.ml_confidence = prediction['confidence']
+                self.ml_features = str(prediction['ml_features'])
+            else:
+                # Fall back to rule-based calculation
+                self._rule_based_calculation()
+                
+        except Exception as e:
+            # If ML fails, use rule-based
+            self._rule_based_calculation()
+            print(f"ML prediction failed, using rule-based: {e}")
+        
+        self.last_updated = datetime.utcnow()
+    
+    def _rule_based_calculation(self):
+        """Traditional rule-based risk calculation"""
         # Weighted score components (inverse risks)
         academic_risk = max(0, 100 - (self.academic_performance or 0)) * 0.3
         attendance_risk = max(0, 100 - (self.attendance_rate or 0)) * 0.3
@@ -169,8 +200,6 @@ class RiskProfile(db.Model):
             self.risk_level = 'Medium'
         else:
             self.risk_level = 'Low'
-        
-        self.last_updated = datetime.utcnow()
     
     def __repr__(self):
         return f'<RiskProfile {self.student_id} - {self.risk_level}>'

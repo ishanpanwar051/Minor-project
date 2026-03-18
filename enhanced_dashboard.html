@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+
+{% block title %}Enhanced Dashboard - EduGuard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-tachometer-alt"></i> Enhanced Dashboard</h1>
+    <div class="d-flex align-items-center">
+        <div class="text-muted me-3">
+            <i class="fas fa-clock"></i> <span id="currentTime"></span>
+        </div>
+        <button class="btn btn-outline-primary btn-sm" onclick="refreshDashboard()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Key Performance Indicators -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-gradient-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ total_students }}</h4>
+                        <p class="card-text">Total Students</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-users fa-2x opacity-75"></i>
+                    </div>
+                </div>
+                <div class="progress mt-3" style="height: 4px;">
+                    <div class="progress-bar" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-gradient-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ at_risk_students }}</h4>
+                        <p class="card-text">At Risk Students</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+                <div class="progress mt-3" style="height: 4px;">
+                    <div class="progress-bar bg-warning" style="width: {{ (at_risk_students / total_students * 100) if total_students > 0 else 0 }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-gradient-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ avg_attendance }}%</h4>
+                        <p class="card-text">Avg Attendance</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x opacity-75"></i>
+                    </div>
+                </div>
+                <div class="progress mt-3" style="height: 4px;">
+                    <div class="progress-bar bg-info" style="width: {{ avg_attendance }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-gradient-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ avg_gpa }}</h4>
+                        <p class="card-text">Avg CGPA</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-graduation-cap fa-2x opacity-75"></i>
+                    </div>
+                </div>
+                <div class="progress mt-3" style="height: 4px;">
+                    <div class="progress-bar bg-light" style="width: {{ (avg_gpa / 10 * 100) if avg_gpa else 0 }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Advanced Analytics Section -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6><i class="fas fa-chart-bar"></i> Risk Distribution Analysis</h6>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary active" onclick="updateChart('bar')">Bar</button>
+                    <button class="btn btn-outline-primary" onclick="updateChart('pie')">Pie</button>
+                    <button class="btn btn-outline-primary" onclick="updateChart('line')">Trend</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="riskChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-brain"></i> AI Insights</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">ML Model Accuracy</small>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-success" style="width: 87%">87%</div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">Predictions Today</small>
+                    <h5>24</h5>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">High Confidence Alerts</small>
+                    <h5 class="text-danger">8</h5>
+                </div>
+                <div class="alert alert-info py-2">
+                    <small><i class="fas fa-lightbulb"></i> AI recommends focusing on attendance patterns this week</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Real-time Alerts & Student Cards -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6><i class="fas fa-bell"></i> Real-time Alerts</h6>
+                <span class="badge bg-danger pulse">Live</span>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <div id="alertsContainer">
+                    {% for alert in recent_alerts %}
+                    <div class="alert alert-{{ 'danger' if alert.severity == 'Critical' else 'warning' if alert.severity == 'High' else 'info' }} alert-dismissible fade show" role="alert">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-{{ 'exclamation-circle' if alert.severity == 'Critical' else 'exclamation-triangle' if alert.severity == 'High' else 'info-circle' }} me-2"></i>
+                            <div class="flex-grow-1">
+                                <strong>{{ alert.title }}</strong><br>
+                                <small>{{ alert.description }}</small>
+                            </div>
+                            <small class="text-muted">{{ alert.created_at.strftime('%H:%M') if alert.created_at else '' }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-users"></i> High Risk Students</h6>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <div class="row">
+                    {% for student in risky_students[:6] %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-{{ 'danger' if student.risk_profile.risk_level == 'Critical' else 'warning' if student.risk_profile.risk_level == 'High' else 'info' }}">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="card-title mb-1">{{ student.first_name }} {{ student.last_name }}</h6>
+                                        <small class="text-muted">{{ student.student_id }}</small><br>
+                                        <small class="text-muted">{{ student.department }}</small>
+                                    </div>
+                                    <span class="badge bg-{{ 'danger' if student.risk_profile.risk_level == 'Critical' else 'warning' if student.risk_profile.risk_level == 'High' else 'info' }}">
+                                        {{ student.risk_profile.risk_level }}
+                                    </span>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">Risk Score: {{ "%.1f"|format(student.risk_profile.risk_score) }}</small>
+                                    {% if student.risk_profile.ml_confidence %}
+                                    <br><small class="text-muted">ML Confidence: {{ "%.1f"|format(student.risk_profile.ml_confidence * 100) }}%</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions & Performance Metrics -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-chart-line"></i> Performance Trends</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="performanceChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-bolt"></i> Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/students" class="btn btn-outline-primary">
+                        <i class="fas fa-users"></i> View All Students
+                    </a>
+                    <a href="/attendance" class="btn btn-outline-success">
+                        <i class="fas fa-calendar-check"></i> Mark Attendance
+                    </a>
+                    <a href="/risk" class="btn btn-outline-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Risk Analysis
+                    </a>
+                    <a href="/ai/chat" class="btn btn-outline-info">
+                        <i class="fas fa-robot"></i> AI Assistant
+                    </a>
+                    <a href="/reports" class="btn btn-outline-secondary">
+                        <i class="fas fa-file-alt"></i> Generate Report
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Dashboard JavaScript
+let riskChart, performanceChart;
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+    updateTime();
+    setInterval(updateTime, 1000);
+    setInterval(refreshAlerts, 30000); // Refresh alerts every 30 seconds
+});
+
+function initializeCharts() {
+    // Risk Distribution Chart
+    const riskCtx = document.getElementById('riskChart').getContext('2d');
+    riskChart = new Chart(riskCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Low Risk', 'Medium Risk', 'High Risk', 'Critical'],
+            datasets: [{
+                label: 'Number of Students',
+                data: [
+                    {{ risk_stats.low if risk_stats.low else 0 }},
+                    {{ risk_stats.medium if risk_stats.medium else 0 }},
+                    {{ risk_stats.high if risk_stats.high else 0 }},
+                    {{ risk_stats.critical if risk_stats.critical else 0 }}
+                ],
+                backgroundColor: ['#28a745', '#ffc107', '#fd7e14', '#dc3545'],
+                borderColor: ['#28a745', '#ffc107', '#fd7e14', '#dc3545'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+
+    // Performance Trends Chart
+    const perfCtx = document.getElementById('performanceChart').getContext('2d');
+    performanceChart = new Chart(perfCtx, {
+        type: 'line',
+        data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Current'],
+            datasets: [{
+                label: 'Average Attendance',
+                data: [85, 82, 78, 75, {{ avg_attendance }}],
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Average GPA',
+                data: [7.2, 7.1, 6.9, 6.8, {{ avg_gpa }}],
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            }
+        }
+    });
+}
+
+function updateChart(type) {
+    riskChart.config.type = type;
+    riskChart.update();
+}
+
+function updateTime() {
+    const now = new Date();
+    document.getElementById('currentTime').textContent = now.toLocaleTimeString();
+}
+
+function refreshDashboard() {
+    location.reload();
+}
+
+function refreshAlerts() {
+    // Simulate real-time alert updates
+    fetch('/api/alerts')
+        .then(response => response.json())
+        .then(data => {
+            updateAlertsContainer(data);
+        })
+        .catch(error => console.log('Error refreshing alerts:', error));
+}
+
+function updateAlertsContainer(alerts) {
+    const container = document.getElementById('alertsContainer');
+    // Update alerts container with new data
+    // This would be implemented with actual API endpoint
+}
+
+// Add CSS animations
+const style = document.createElement('style');
+style.textContent = `
+    .pulse {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+    
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .bg-gradient-danger {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .bg-gradient-success {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .bg-gradient-info {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

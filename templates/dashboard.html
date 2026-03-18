@@ -82,16 +82,17 @@
                 <h6><i class="fas fa-bell"></i> Recent Alerts</h6>
             </div>
             <div class="card-body">
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i> <strong>Sneha Reddy</strong> - Attendance below 70%
-                </div>
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle"></i> <strong>Rohit Verma</strong> - CGPA below 6.0
-                </div>
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> <strong>Priya Patel</strong> - Missing classes for 3 days
-                </div>
-            </div>
+{% if recent_alerts %}
+  {% for alert in recent_alerts %}
+  <div class="alert {% if alert.severity == 'Critical' %}alert-danger{% elif alert.severity == 'High' %}alert-warning{% else %}alert-info{% endif %}">
+    <i class="fas fa-exclamation-triangle"></i>
+    <strong>{{ alert.title }}</strong> — {{ alert.description }}
+  </div>
+  {% endfor %}
+{% else %}
+  <p class="text-muted text-center">No active alerts</p>
+{% endif %}
+</div>
         </div>
     </div>
     
@@ -104,6 +105,9 @@
                 <div class="d-grid gap-2">
                     <a href="/students" class="btn btn-outline-primary">
                         <i class="fas fa-users"></i> View All Students
+                    </a>
+                    <a href="/add_student" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> Add New Student
                     </a>
                     <a href="/attendance" class="btn btn-outline-success">
                         <i class="fas fa-calendar-check"></i> Mark Attendance
