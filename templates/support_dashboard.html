@@ -1,0 +1,503 @@
+{% extends "base.html" %}
+
+{% block title %}My Support - EduGuard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-hands-helping me-2"></i>My Support</h1>
+    <div class="text-muted">
+        <i class="fas fa-user-graduate me-2"></i>{{ student.first_name }} {{ student.last_name }}
+    </div>
+</div>
+
+<!-- Motivational Quote Section -->
+<div class="card mb-4">
+    <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <h5><i class="fas fa-lightbulb me-2"></i>Daily Motivation</h5>
+    </div>
+    <div class="card-body text-center">
+        <blockquote class="blockquote mb-0">
+            <p class="fs-5">{{ todays_quote }}</p>
+            <footer class="blockquote-footer mt-2">
+                <small>Daily Inspiration</small>
+            </footer>
+        </blockquote>
+    </div>
+</div>
+
+<div class="row">
+    <!-- My Goals Section -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-bullseye me-2"></i>My Goals</h5>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addGoalModal">
+                    <i class="fas fa-plus me-1"></i>Add Goal
+                </button>
+            </div>
+            <div class="card-body">
+                {% if active_goals %}
+                    {% for goal in active_goals %}
+                    <div class="goal-item mb-3 p-3 border rounded">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1">{{ goal.title }}</h6>
+                                {% if goal.description %}
+                                <p class="text-muted small mb-2">{{ goal.description }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="text-end">
+                                {% if goal.is_overdue() %}
+                                <span class="badge bg-danger">Overdue</span>
+                                {% elif goal.days_remaining() and goal.days_remaining() <= 3 %}
+                                <span class="badge bg-warning">Due Soon</span>
+                                {% else %}
+                                <span class="badge bg-success">Active</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between mb-1">
+                                <small class="text-muted">Progress</small>
+                                <small class="text-muted">{{ goal.progress }}%</small>
+                            </div>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar 
+                                    {% if goal.progress >= 80 %}bg-success
+                                    {% elif goal.progress >= 50 %}bg-info
+                                    {% elif goal.progress >= 25 %}bg-warning
+                                    {% else %}bg-danger{% endif %}" 
+                                    style="width: {{ goal.progress }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Target Date -->
+                        {% if goal.target_date %}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>
+                                Target: {{ goal.target_date.strftime('%d %b %Y') }}
+                                {% if goal.days_remaining() %}
+                                ({{ goal.days_remaining() }} days left)
+                                {% endif %}
+                            </small>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="updateGoalProgress({{ goal.id }}, {{ goal.progress }})">
+                                    <i class="fas fa-edit"></i> Update
+                                </button>
+                                <button class="btn btn-sm btn-outline-success me-1" onclick="completeGoal({{ goal.id }})">
+                                    <i class="fas fa-check"></i> Done
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="abandonGoal({{ goal.id }})">
+                                    <i class="fas fa-times"></i> Abandon
+                                </button>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-bullseye fa-3x mb-3"></i>
+                        <p>No active goals yet. Set your first goal to get started!</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addGoalModal">
+                            <i class="fas fa-plus me-1"></i>Add Your First Goal
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mood This Week Section -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-smile me-2"></i>Mood This Week</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    {% for i in range(6, -1, -1) %}
+                    {% set check_date = date.today() - timedelta(days=i) %}
+                    {% set mood_log = mood_data[check_date] %}
+                    <div class="col">
+                        <small class="d-block text-muted">{{ check_date.strftime('%a')[:3] }}</small>
+                        {% if mood_log %}
+                            <div class="mood-circle mt-1 cursor-pointer" 
+                                 style="background-color: #dc3545; width: 30px; height: 30px; border-radius: 50%; margin: 0 auto;"
+                                 title="{{ mood_log.get_mood_text() }} - {{ mood_log.note or 'No note' }}">
+                                <span style="color: white; font-size: 12px; line-height: 30px;">{{ mood_log.get_mood_emoji() }}</span>
+                            </div>
+                        {% else %}
+                            <div class="mood-circle mt-1 cursor-pointer" 
+                                 style="background-color: #e9ecef; width: 30px; height: 30px; border-radius: 50%; margin: 0 auto; border: 2px dashed #adb5bd;"
+                                 title="No mood logged">
+                                <span style="color: #adb5bd; font-size: 12px; line-height: 26px;">?</span>
+                            </div>
+                        {% endif %}
+                        {% if i == 0 and not todays_mood %}
+                        <button class="btn btn-sm btn-outline-primary mt-2" data-bs-toggle="modal" data-bs-target="#moodModal">
+                            Log Mood
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Mood Legend -->
+                <div class="mt-3">
+                    <small class="text-muted d-block mb-2">Mood Scale:</small>
+                    <div class="d-flex justify-content-between">
+                        <span><span style="color: #dc3545;">😢</span> Very Bad</span>
+                        <span><span style="color: #fd7e14;">😔</span> Bad</span>
+                        <span><span style="color: #6c757d;">😐</span> Neutral</span>
+                        <span><span style="color: #0dcaf0;">😊</span> Good</span>
+                        <span><span style="color: #198754;">😄</span> Great</span>
+                    </div>
+                </div>
+                
+                {% if not todays_mood %}
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Don't forget to log your mood today!
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-bullseye fa-2x text-primary mb-2"></i>
+                <h6>Goals</h6>
+                <p class="text-muted small">{{ active_goals|length }} active goals</p>
+                <a href="{{ url_for('support.goals') }}" class="btn btn-outline-primary btn-sm">Manage Goals</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-smile fa-2x text-success mb-2"></i>
+                <h6>Mood Tracker</h6>
+                <p class="text-muted small">Track daily emotions</p>
+                <a href="{{ url_for('support.mood') }}" class="btn btn-outline-success btn-sm">View History</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
+                <h6>Progress</h6>
+                <p class="text-muted small">Track your improvement</p>
+                <button class="btn btn-outline-info btn-sm" disabled>Coming Soon</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Goal Modal -->
+<div class="modal fade" id="addGoalModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Add New Goal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('support.add_goal') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="goalTitle" class="form-label">Goal Title *</label>
+                        <input type="text" class="form-control" id="goalTitle" name="title" required 
+                               placeholder="e.g., Complete Python assignment">
+                    </div>
+                    <div class="mb-3">
+                        <label for="goalDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="goalDescription" name="description" rows="3"
+                                  placeholder="Add more details about your goal..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="goalTargetDate" class="form-label">Target Date</label>
+                        <input type="date" class="form-control" id="goalTargetDate" name="target_date"
+                               min="{{ date.today().strftime('%Y-%m-%d') }}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add Goal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Mood Modal -->
+<div class="modal fade" id="moodModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-smile me-2"></i>How are you feeling today?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('support.mood') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select your mood:</label>
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn mood-btn" data-mood="1" data-bs-toggle="tooltip" title="Very Bad">
+                                😢<br><small>Very Bad</small>
+                            </button>
+                            <button type="button" class="btn mood-btn" data-mood="2" data-bs-toggle="tooltip" title="Bad">
+                                😔<br><small>Bad</small>
+                            </button>
+                            <button type="button" class="btn mood-btn" data-mood="3" data-bs-toggle="tooltip" title="Neutral">
+                                😐<br><small>Neutral</small>
+                            </button>
+                            <button type="button" class="btn mood-btn" data-mood="4" data-bs-toggle="tooltip" title="Good">
+                                😊<br><small>Good</small>
+                            </button>
+                            <button type="button" class="btn mood-btn" data-mood="5" data-bs-toggle="tooltip" title="Great">
+                                😄<br><small>Great</small>
+                            </button>
+                        </div>
+                        <input type="hidden" id="moodScore" name="mood_score" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="moodNote" class="form-label">Note (optional)</label>
+                        <textarea class="form-control" id="moodNote" name="note" rows="3"
+                                  placeholder="What's on your mind today?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submitMood">
+                        <i class="fas fa-save me-1"></i>Log Mood
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Update Modal -->
+<div class="modal fade" id="progressModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Update Goal Progress</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="progressForm">
+                <div class="modal-body">
+                    <input type="hidden" id="progressGoalId" name="goal_id">
+                    <div class="mb-3">
+                        <label for="progressValue" class="form-label">Progress: <span id="progressDisplay">50</span>%</label>
+                        <input type="range" class="form-range" id="progressValue" name="progress" 
+                               min="0" max="100" value="50" step="5">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Update Progress
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 10px;
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.bg-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.goal-item {
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.goal-item:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+}
+
+.mood-circle {
+    transition: all 0.3s ease;
+}
+
+.mood-circle:hover {
+    transform: scale(1.1);
+}
+
+.mood-btn {
+    border: 2px solid #e9ecef;
+    background: white;
+    border-radius: 10px;
+    padding: 15px 10px;
+    margin: 0 5px;
+    transition: all 0.3s ease;
+}
+
+.mood-btn:hover {
+    transform: translateY(-2px);
+}
+
+.mood-btn.selected {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 8px;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    transform: translateY(-1px);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mood selection
+    const moodButtons = document.querySelectorAll('.mood-btn');
+    const moodScoreInput = document.getElementById('moodScore');
+    
+    moodButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            moodButtons.forEach(b => b.classList.remove('selected'));
+            this.classList.add('selected');
+            moodScoreInput.value = this.dataset.mood;
+        });
+    });
+    
+    // Progress slider
+    const progressSlider = document.getElementById('progressValue');
+    const progressDisplay = document.getElementById('progressDisplay');
+    
+    if (progressSlider) {
+        progressSlider.addEventListener('input', function() {
+            progressDisplay.textContent = this.value;
+        });
+    }
+    
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+// Goal functions
+function updateGoalProgress(goalId, currentProgress) {
+    document.getElementById('progressGoalId').value = goalId;
+    document.getElementById('progressValue').value = currentProgress;
+    document.getElementById('progressDisplay').textContent = currentProgress;
+    
+    const modal = new bootstrap.Modal(document.getElementById('progressModal'));
+    modal.show();
+}
+
+function completeGoal(goalId) {
+    if (confirm('Are you sure you want to mark this goal as completed?')) {
+        fetch(`/support/goals/${goalId}/complete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        });
+    }
+}
+
+function abandonGoal(goalId) {
+    if (confirm('Are you sure you want to abandon this goal?')) {
+        fetch(`/support/goals/${goalId}/abandon`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        });
+    }
+}
+
+// Progress form submission
+document.getElementById('progressForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const goalId = document.getElementById('progressGoalId').value;
+    const progress = document.getElementById('progressValue').value;
+    
+    fetch(`/support/goals/${goalId}/update`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `progress=${progress}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+});
+</script>
+{% endblock %}

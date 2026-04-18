@@ -1,0 +1,114 @@
+# EduGuard - Complete Requirements File
+# Install with: pip install -r requirements.txt
+
+# === CORE FRAMEWORK ===
+flask==2.3.3
+flask-sqlalchemy==3.0.5
+flask-login==0.6.3
+werkzeug==2.3.7
+
+# === DATABASE ===
+sqlalchemy==2.0.21
+pymysql==1.1.0
+
+# === DATA PROCESSING ===
+pandas==2.1.3
+numpy==1.25.2
+
+# === MACHINE LEARNING ===
+scikit-learn==1.3.2
+joblib==1.3.2
+
+# === WEB DEPENDENCIES ===
+jinja2==3.1.2
+markupsafe==2.1.3
+itsdangerous==2.1.2
+click==8.1.7
+blinker==1.6.3
+
+# === DATE/TIME ===
+python-dateutil==2.8.2
+pytz==2023.3
+
+# === VALIDATION ===
+email-validator==2.1.0
+wtforms==3.1.0
+flask-wtf==1.2.1
+
+# === SECURITY ===
+bcrypt==4.1.2
+cryptography==41.0.7
+
+# === HTTP REQUESTS ===
+requests==2.31.0
+urllib3==2.1.0
+
+# === JSON PROCESSING ===
+jsonschema==4.19.2
+
+# === CONFIGURATION ===
+python-dotenv==1.0.0
+
+# === DEVELOPMENT TOOLS ===
+pytest==7.4.3
+pytest-flask==1.3.0
+black==23.11.0
+flake8==6.1.0
+
+# === MONITORING ===
+gunicorn==21.2.0
+
+# === BACKGROUNDS TASKS ===
+celery==5.3.4
+redis==5.0.1
+
+# === IMAGE PROCESSING (For future features) ===
+pillow==10.1.0
+
+# === EXCEL/CSV SUPPORT ===
+openpyxl==3.1.2
+xlrd==2.0.1
+
+# === PDF GENERATION (For reports) ===
+reportlab==4.0.7
+fpdf2==2.7.6
+
+# === API DOCUMENTATION ===
+flask-restful==0.3.10
+flask-cors==4.0.0
+
+# === CACHING ===
+flask-caching==2.1.0
+
+# === LOGGING ===
+loguru==0.7.2
+
+# === TESTING ===
+selenium==4.15.2
+beautifulsoup4==4.12.2
+
+# === MIGRATIONS ===
+flask-migrate==4.0.5
+alembic==1.12.1
+
+# === EMAIL ===
+flask-mail==0.9.1
+
+# === SCHEDULING ===
+apscheduler==3.10.4
+
+# === REAL-TIME COMMUNICATION ===
+flask-socketio==5.3.6
+python-socketio==5.10.0
+
+# === STATISTICS ===
+scipy==1.11.4
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# === NATIVE LIBRARIES (Windows specific) ===
+pywin32==306; sys_platform == "win32"
+
+# === VERSION COMPATIBILITY ===
+# These versions are tested and compatible with Python 3.10+
+# For Python 3.11+, some versions may need updates

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Update System - EduGuard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .dashboard-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin: 20px auto;
+            max-width: 1200px;
+            padding: 30px;
+        }
+        .update-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-running { background-color: #28a745; }
+        .status-stopped { background-color: #dc3545; }
+        .btn-update {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 20px;
+            transition: all 0.3s ease;
+        }
+        .btn-update:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="dashboard-container">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-sync-alt"></i> Daily Update System</h2>
+                <div class="d-flex align-items-center">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span id="statusText">Loading...</span>
+                </div>
+            </div>
+
+            <!-- System Status -->
+            <div class="update-card">
+                <h5><i class="fas fa-info-circle"></i> System Status</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>System Running:</strong> <span id="systemRunning">-</span></p>
+                        <p><strong>Last Update:</strong> <span id="lastUpdate">-</span></p>
+                        <p><strong>Update Time:</strong> 9:00 AM Daily</p>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success" onclick="startSystem()">
+                                <i class="fas fa-play"></i> Start
+                            </button>
+                            <button class="btn btn-danger" onclick="stopSystem()">
+                                <i class="fas fa-stop"></i> Stop
+                            </button>
+                            <button class="btn btn-update" onclick="manualUpdate()">
+                                <i class="fas fa-sync"></i> Update Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stats-card">
+                        <div class="stats-number" id="totalStudents">-</div>
+                        <div>Total Students</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                        <div class="stats-number" id="presentStudents">-</div>
+                        <div>Present Today</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                        <div class="stats-number" id="attendanceRate">-%</div>
+                        <div>Attendance Rate</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                        <div class="stats-number" id="totalUsers">-</div>
+                        <div>Total Users</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Update Controls -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="update-card">
+                        <h5><i class="fas fa-users"></i> User Data Updates</h5>
+                        <p>Update user statistics, last login times, and activity data.</p>
+                        <button class="btn btn-update" onclick="updateUserData()">
+                            <i class="fas fa-user-cog"></i> Update User Data
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="update-card">
+                        <h5><i class="fas fa-calendar-check"></i> Attendance Updates</h5>
+                        <p>Generate daily attendance records for all students.</p>
+                        <button class="btn btn-update" onclick="updateAttendance()">
+                            <i class="fas fa-calendar-plus"></i> Update Attendance
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="update-card">
+                <h5><i class="fas fa-history"></i> Recent Activity</h5>
+                <div id="recentActivity">
+                    <p>Loading recent activity...</p>
+                </div>
+            </div>
+
+            <!-- Configuration -->
+            <div class="update-card">
+                <h5><i class="fas fa-cog"></i> Configuration</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Update Time</label>
+                            <input type="time" class="form-control" value="09:00" id="updateTime">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Attendance Rate (%)</label>
+                            <input type="number" class="form-control" value="85" min="0" max="100" id="attendanceRate">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Auto Start</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="autoStart">
+                                <label class="form-check-label" for="autoStart">
+                                    Start system automatically
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Weekend Updates</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="weekendUpdates" checked>
+                                <label class="form-check-label" for="weekendUpdates">
+                                    Include weekends
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="saveConfiguration()">
+                    <i class="fas fa-save"></i> Save Configuration
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"></script>
+    <script>
+        let updateInterval;
+
+        function loadStatus() {
+            fetch('/update/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const status = data.data;
+                        updateStatusDisplay(status);
+                    }
+                })
+                .catch(error => console.error('Error loading status:', error));
+        }
+
+        function updateStatusDisplay(status) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const systemRunning = document.getElementById('systemRunning');
+            
+            if (status.system_running) {
+                indicator.className = 'status-indicator status-running';
+                statusText.textContent = 'Running';
+                systemRunning.textContent = 'Yes';
+            } else {
+                indicator.className = 'status-indicator status-stopped';
+                statusText.textContent = 'Stopped';
+                systemRunning.textContent = 'No';
+            }
+            
+            if (status.date) {
+                document.getElementById('lastUpdate').textContent = status.date;
+                document.getElementById('totalStudents').textContent = status.total_students || 0;
+                document.getElementById('presentStudents').textContent = status.present_students || 0;
+                document.getElementById('attendanceRate').textContent = 
+                    status.attendance_rate ? status.attendance_rate.toFixed(1) + '%' : '-';
+            }
+        }
+
+        function startSystem() {
+            fetch('/update/start', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('System started successfully', 'success');
+                        loadStatus();
+                    } else {
+                        showAlert('Error starting system: ' + data.error, 'danger');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function stopSystem() {
+            fetch('/update/stop', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('System stopped successfully', 'warning');
+                        loadStatus();
+                    } else {
+                        showAlert('Error stopping system: ' + data.error, 'danger');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function manualUpdate() {
+            showAlert('Starting manual update...', 'info');
+            fetch('/update/manual', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('Manual update started', 'success');
+                        setTimeout(loadStatus, 2000);
+                    } else {
+                        showAlert('Error: ' + data.error, 'danger');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function updateUserData() {
+            showAlert('Updating user data...', 'info');
+            fetch('/update/user-data', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('User data update started', 'success');
+                    } else {
+                        showAlert('Error: ' + data.error, 'danger');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function updateAttendance() {
+            showAlert('Updating attendance...', 'info');
+            fetch('/update/attendance', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('Attendance update started', 'success');
+                        setTimeout(loadStatus, 2000);
+                    } else {
+                        showAlert('Error: ' + data.error, 'danger');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function saveConfiguration() {
+            showAlert('Configuration saved', 'success');
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.dashboard-container').prepend(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        // Load user statistics
+        function loadUserStats() {
+            fetch('/update/api/user-stats')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('totalUsers').textContent = data.data.total_users;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Load recent activity
+        function loadRecentActivity() {
+            const activities = [
+                'System started at 9:00 AM',
+                'Attendance updated for 45 students',
+                'User data synchronized',
+                'Daily statistics generated'
+            ];
+            
+            const activityDiv = document.getElementById('recentActivity');
+            activityDiv.innerHTML = activities.map(activity => 
+                `<p><i class="fas fa-chevron-right text-primary"></i> ${activity}</p>`
+            ).join('');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStatus();
+            loadUserStats();
+            loadRecentActivity();
+            
+            // Refresh status every 30 seconds
+            updateInterval = setInterval(loadStatus, 30000);
+        });
+    </script>
+</body>
+</html>

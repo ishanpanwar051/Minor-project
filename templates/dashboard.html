@@ -103,6 +103,9 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
+                    <button class="btn btn-gradient text-white" onclick="showAIInsights()">
+                        <i class="fas fa-brain"></i> Generate AI Insights
+                    </button>
                     <a href="/students" class="btn btn-outline-primary">
                         <i class="fas fa-users"></i> View All Students
                     </a>
@@ -133,17 +136,17 @@ const avgAttendance = {{ avg_attendance }};
 
 // Risk Distribution Chart
 const riskCtx = document.getElementById('riskChart').getContext('2d');
-const lowRiskCount = Math.max(0, totalStudents - atRiskStudents - 5);
+const riskStats = {{ risk_stats | tojson }};
 
 new Chart(riskCtx, {
     type: 'bar',
     data: {
-        labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+        labels: ['Low Risk', 'Medium Risk', 'High Risk', 'Critical'],
         datasets: [{
             label: 'Number of Students',
-            data: [lowRiskCount, 5, atRiskStudents],
-            backgroundColor: ['#28a745', '#ffc107', '#dc3545'],
-            borderColor: ['#28a745', '#ffc107', '#dc3545'],
+            data: [riskStats.low || 0, riskStats.medium || 0, riskStats.high || 0, riskStats.critical || 0],
+            backgroundColor: ['#28a745', '#ffc107', '#fd7e14', '#dc3545'],
+            borderColor: ['#28a745', '#ffc107', '#fd7e14', '#dc3545'],
             borderWidth: 1
         }]
     },
@@ -159,6 +162,7 @@ new Chart(riskCtx, {
 
 // Attendance Overview Chart
 const attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
+const presentCount = avgAttendance;
 const absentCount = Math.max(0, 100 - avgAttendance);
 
 new Chart(attendanceCtx, {
@@ -166,7 +170,7 @@ new Chart(attendanceCtx, {
     data: {
         labels: ['Present', 'Absent'],
         datasets: [{
-            data: [avgAttendance, absentCount],
+            data: [presentCount, absentCount],
             backgroundColor: ['#28a745', '#dc3545'],
             borderColor: ['#28a745', '#dc3545'],
             borderWidth: 1
@@ -177,9 +181,108 @@ new Chart(attendanceCtx, {
         plugins: {
             legend: {
                 position: 'bottom'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.label + ': ' + context.parsed.toFixed(1) + '%';
+                    }
+                }
             }
         }
     }
 });
+
+// AI Insights Modal
+function showAIInsights() {
+    // Create modal if not exists
+    if (!document.getElementById('aiInsightsModal')) {
+        const modalHtml = `
+            <div class="modal fade" id="aiInsightsModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <h5 class="modal-title">
+                                <i class="fas fa-brain me-2"></i>AI Insights
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body" id="aiInsightsContent">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Generating AI insights...</p>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-primary" onclick="generateFullReport()">
+                                <i class="fas fa-file-alt me-1"></i>Generate Full Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('aiInsightsModal'));
+    modal.show();
+    
+    // Fetch AI insights
+    fetch('/analysis/api/generate_insights')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayInsights(data.insights);
+            } else {
+                showError('Failed to generate insights');
+            }
+        })
+        .catch(error => {
+            showError('Error: ' + error.message);
+        });
+}
+
+function displayInsights(insights) {
+    const content = document.getElementById('aiInsightsContent');
+    let html = '';
+    
+    insights.forEach(insight => {
+        const alertClass = insight.type === 'warning' ? 'alert-warning' : 
+                          insight.type === 'danger' ? 'alert-danger' : 
+                          insight.type === 'success' ? 'alert-success' : 'alert-info';
+        
+        html += `
+            <div class="alert ${alertClass} border-0 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-${insight.icon} fa-2x me-3"></i>
+                    <div>
+                        <h6 class="alert-heading mb-1">${insight.title}</h6>
+                        <p class="mb-0">${insight.message}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    content.innerHTML = html;
+}
+
+function showError(message) {
+    const content = document.getElementById('aiInsightsContent');
+    content.innerHTML = `
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            ${message}
+        </div>
+    `;
+}
+
+function generateFullReport() {
+    window.location.href = '/analysis/generate_report';
+}
 </script>
 {% endblock %}

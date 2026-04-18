@@ -1,0 +1,522 @@
+{% extends "base.html" %}
+
+{% block title %}AI Analysis Report - EduGuard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-brain me-2"></i>AI Analysis Report</h1>
+    <div class="text-muted">
+        <i class="fas fa-clock me-1"></i>
+        Generated: {{ report.generated_at }}
+    </div>
+</div>
+
+<!-- AI Insights Popup -->
+<div class="modal fade" id="aiInsightsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <h5 class="modal-title">
+                    <i class="fas fa-brain me-2"></i>AI Insights
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="aiInsightsContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Generating AI insights...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="generateFullReport()">
+                    <i class="fas fa-file-alt me-1"></i>Generate Full Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5><i class="fas fa-magic me-2"></i>AI-Powered Insights</h5>
+                        <p class="text-muted mb-0">Get instant AI analysis and recommendations</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" onclick="showAIInsights()">
+                            <i class="fas fa-brain me-1"></i>Generate AI Insights
+                        </button>
+                        <button class="btn btn-success ms-2" onclick="window.print()">
+                            <i class="fas fa-print me-1"></i>Print Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Student Overview -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                <h4 class="card-title">{{ report.student_overview.total_students }}</h4>
+                <p class="card-text text-muted">Total Students</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-user-check fa-2x text-success mb-2"></i>
+                <h4 class="card-title">{{ report.student_overview.active_students }}</h4>
+                <p class="card-text text-muted">Active Students</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-user-plus fa-2x text-info mb-2"></i>
+                <h4 class="card-title">{{ report.student_overview.new_students_this_month }}</h4>
+                <p class="card-text text-muted">New This Month</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-exclamation-triangle fa-2x text-danger mb-2"></i>
+                <h4 class="card-title">{{ report.risk_analysis.total_at_risk }}</h4>
+                <p class="card-text text-muted">At Risk Students</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Risk Analysis -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie me-2"></i>Risk Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="riskChart" width="400" height="200"></canvas>
+                <div class="mt-3">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <span class="badge bg-success">Low: {{ report.risk_analysis.distribution.Low or 0 }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-warning">Medium: {{ report.risk_analysis.distribution.Medium or 0 }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-danger">High: {{ report.risk_analysis.distribution.High or 0 }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-dark">Critical: {{ report.risk_analysis.distribution.Critical or 0 }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-line me-2"></i>Academic Performance</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Average GPA:</strong> {{ report.academic_performance.avg_gpa }}</p>
+                        <p><strong>Highest GPA:</strong> {{ report.academic_performance.max_gpa }}</p>
+                        <p><strong>Lowest GPA:</strong> {{ report.academic_performance.min_gpa }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>High Performers:</strong> {{ report.academic_performance.high_performers }}</p>
+                        <p><strong>Low Performers:</strong> {{ report.academic_performance.low_performers }}</p>
+                        <p><strong>Performance Rate:</strong> {{ "%.1f"|format((report.academic_performance.high_performers / report.student_overview.total_students * 100) if report.student_overview.total_students > 0 else 0) }}%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Department Analysis -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-building me-2"></i>Department-wise Analysis</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Department</th>
+                                <th>Student Count</th>
+                                <th>Average GPA</th>
+                                <th>Performance Level</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dept_data in report.department_analysis %}
+                            <tr>
+                                <td><strong>{{ dept_data.department }}</strong></td>
+                                <td>{{ dept_data.count }}</td>
+                                <td>{{ dept_data.avg_gpa }}</td>
+                                <td>
+                                    {% if dept_data.avg_gpa >= 8.0 %}
+                                        <span class="badge bg-success">Excellent</span>
+                                    {% elif dept_data.avg_gpa >= 7.0 %}
+                                        <span class="badge bg-info">Good</span>
+                                    {% elif dept_data.avg_gpa >= 6.0 %}
+                                        <span class="badge bg-warning">Average</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Poor</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if dept_data.avg_gpa >= 7.0 %}
+                                        <i class="fas fa-check-circle text-success"></i>
+                                    {% else %}
+                                        <i class="fas fa-exclamation-circle text-warning"></i>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- At-Risk Students -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5><i class="fas fa-exclamation-triangle me-2"></i>At-Risk Students (Top 15)</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Student ID</th>
+                                <th>Department</th>
+                                <th>Year</th>
+                                <th>GPA</th>
+                                <th>Risk Level</th>
+                                <th>Confidence</th>
+                                <th>Risk Factors</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in report.at_risk_students %}
+                            <tr>
+                                <td><strong>{{ student.name }}</strong></td>
+                                <td><span class="badge bg-secondary">{{ student.student_id }}</span></td>
+                                <td>{{ student.department }}</td>
+                                <td>{{ student.year }}</td>
+                                <td>{{ student.gpa }}</td>
+                                <td>
+                                    {% if student.risk_level == 'Critical' %}
+                                        <span class="badge bg-dark">{{ student.risk_level }}</span>
+                                    {% elif student.risk_level == 'High' %}
+                                        <span class="badge bg-danger">{{ student.risk_level }}</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">{{ student.risk_level }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ student.confidence }}%</td>
+                                <td>
+                                    {% for factor in student.risk_factors[:2] %}
+                                    <span class="badge bg-light text-dark me-1">{{ factor.strip() }}</span>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="viewStudentDetails('{{ student.student_id }}')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-success" onclick="scheduleIntervention('{{ student.student_id }}')">
+                                        <i class="fas fa-calendar"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Performers -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fas fa-trophy me-2"></i>Top Performers (Top 10)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for student in report.top_performers %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-success">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ student.name }}</h6>
+                                        <p class="text-muted mb-0">{{ student.student_id }} • {{ student.department }}</p>
+                                    </div>
+                                    <div class="text-end">
+                                        <h4 class="text-success mb-0">{{ student.gpa }}</h4>
+                                        <small class="text-muted">GPA</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Recommendations -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-lightbulb me-2"></i>AI-Powered Recommendations</h5>
+            </div>
+            <div class="card-body">
+                {% for rec in report.recommendations %}
+                <div class="alert alert-{{ 'danger' if rec.priority == 'High' else 'warning' if rec.priority == 'Medium' else 'info' }} border-0">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-flag me-2"></i>{{ rec.category }}
+                                <span class="badge bg-{{ 'danger' if rec.priority == 'High' else 'warning' if rec.priority == 'Medium' else 'info' }} ms-2">
+                                    {{ rec.priority }} Priority
+                                </span>
+                            </h6>
+                            <p class="mb-1">{{ rec.recommendation }}</p>
+                            <small class="text-muted"><strong>Action:</strong> {{ rec.action }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Predictions Summary -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-brain me-2"></i>AI Model Performance</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4>{{ report.ai_predictions.total_predictions }}</h4>
+                            <p class="text-muted">Total Predictions</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4 class="text-success">{{ report.ai_predictions.high_confidence }}</h4>
+                            <p class="text-muted">High Confidence (>80%)</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4 class="text-warning">{{ report.ai_predictions.medium_confidence }}</h4>
+                            <p class="text-muted">Medium Confidence (50-80%)</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4 class="text-info">{{ "%.1f"|format(report.ai_predictions.average_confidence) }}%</h4>
+                            <p class="text-muted">Average Confidence</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 10px;
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.bg-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 8px;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    transform: translateY(-1px);
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.alert {
+    border-radius: 10px;
+}
+
+.modal-content {
+    border-radius: 15px;
+    border: none;
+}
+
+.modal-header {
+    border-radius: 15px 15px 0 0 !important;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Risk Distribution Chart
+    const riskCtx = document.getElementById('riskChart').getContext('2d');
+    const riskData = {
+        labels: ['Low', 'Medium', 'High', 'Critical'],
+        datasets: [{
+            data: [
+                {{ report.risk_analysis.distribution.Low or 0 }},
+                {{ report.risk_analysis.distribution.Medium or 0 }},
+                {{ report.risk_analysis.distribution.High or 0 }},
+                {{ report.risk_analysis.distribution.Critical or 0 }}
+            ],
+            backgroundColor: ['#198754', '#FFC107', '#dc3545', '#212529'],
+            borderWidth: 0
+        }]
+    };
+    
+    new Chart(riskCtx, {
+        type: 'doughnut',
+        data: riskData,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+});
+
+function showAIInsights() {
+    const modal = new bootstrap.Modal(document.getElementById('aiInsightsModal'));
+    modal.show();
+    
+    // Fetch AI insights
+    fetch('/analysis/api/generate_insights')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayInsights(data.insights);
+            } else {
+                showError('Failed to generate insights');
+            }
+        })
+        .catch(error => {
+            showError('Error: ' + error.message);
+        });
+}
+
+function displayInsights(insights) {
+    const content = document.getElementById('aiInsightsContent');
+    let html = '';
+    
+    insights.forEach(insight => {
+        const alertClass = insight.type === 'warning' ? 'alert-warning' : 
+                          insight.type === 'danger' ? 'alert-danger' : 
+                          insight.type === 'success' ? 'alert-success' : 'alert-info';
+        
+        html += `
+            <div class="alert ${alertClass} border-0 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-${insight.icon} fa-2x me-3"></i>
+                    <div>
+                        <h6 class="alert-heading mb-1">${insight.title}</h6>
+                        <p class="mb-0">${insight.message}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    content.innerHTML = html;
+}
+
+function showError(message) {
+    const content = document.getElementById('aiInsightsContent');
+    content.innerHTML = `
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            ${message}
+        </div>
+    `;
+}
+
+function generateFullReport() {
+    window.location.href = '/analysis/generate_report';
+}
+
+function viewStudentDetails(studentId) {
+    // Implementation for viewing student details
+    alert('Viewing details for student: ' + studentId);
+}
+
+function scheduleIntervention(studentId) {
+    // Implementation for scheduling intervention
+    alert('Scheduling intervention for student: ' + studentId);
+}
+</script>
+{% endblock %}

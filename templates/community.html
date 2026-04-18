@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}Community Support - Student Dropout Prevention System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-hands-helping"></i> Community Support & NEP 2020</h1>
+    <div class="text-muted">
+        <i class="fas fa-users"></i> Building Stronger Educational Community
+    </div>
+</div>
+
+<!-- NEP 2020 Goals -->
+<div class="card mb-4">
+    <div class="card-header bg-gradient" style="background: linear-gradient(45deg, #007bff, #6610f2);">
+        <h5 class="text-white mb-0"><i class="fas fa-flag"></i> National Education Policy 2020 Goals</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for goal in nep_goals %}
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 14px;">
+                            {{ loop.index }}
+                        </div>
+                    </div>
+                    <div>
+                        <strong>{{ goal }}</strong>
+                        <br><small class="text-muted">Key objective for educational transformation</small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Community Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <i class="fas fa-user-graduate fa-2x mb-2"></i>
+                <h4>{{ peer_mentors|length }}</h4>
+                <p class="card-text">Peer Mentors</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <i class="fas fa-hand-holding-heart fa-2x mb-2"></i>
+                <h4>{{ ngos|length }}</h4>
+                <p class="card-text">Partner NGOs</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-warning text-white">
+            <div class="card-body">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <h4>500+</h4>
+                <p class="card-text">Community Volunteers</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-primary text-white">
+            <div class="card-body">
+                <i class="fas fa-project-diagram fa-2x mb-2"></i>
+                <h4>12</h4>
+                <p class="card-text">Active Programs</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Peer Mentors -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="fas fa-user-graduate"></i> Peer Mentor Program</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-3">High-performing students who can mentor and support at-risk peers</p>
+        <div class="row">
+            {% for mentor in peer_mentors %}
+            <div class="col-md-6 mb-3">
+                <div class="card border-success">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-star"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ mentor.first_name }} {{ mentor.last_name }}</h6>
+                                <small class="text-muted">{{ mentor.department }} | GPA: {{ mentor.gpa }}</small>
+                                <br><small class="text-success"><i class="fas fa-check-circle"></i> Available for mentoring</small>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-success" onclick="assignMentee({{ mentor.id }})">
+                                    <i class="fas fa-user-plus"></i> Assign
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12">
+                <p class="text-center text-muted">No peer mentors available at the moment</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- NGO Partners -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="fas fa-hand-holding-heart"></i> NGO Partners & Support Organizations</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for ngo in ngos %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">{{ ngo.name }}</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text small">{{ ngo.focus }}</p>
+                        
+                        <div class="mb-2">
+                            <strong><i class="fas fa-bullhorn text-primary"></i> Programs:</strong><br>
+                            {% for program in ngo.programs %}
+                            <span class="badge bg-light text-dark me-1">{{ program }}</span>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-2">
+                            <strong><i class="fas fa-envelope text-info"></i> Contact:</strong><br>
+                            <small>{{ ngo.contact }}</small>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{{ ngo.website }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-globe"></i> Visit Website
+                            </a>
+                            <button class="btn btn-outline-success btn-sm" onclick="contactNGO('{{ ngo.name }}')">
+                                <i class="fas fa-phone"></i> Contact NGO
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Community Programs -->
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-calendar-alt"></i> Upcoming Community Programs</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="card border-info">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="text-info">Study Circle Program</h6>
+                                <p class="card-text small">Peer-led study groups for difficult subjects</p>
+                                <small class="text-muted"><i class="fas fa-calendar"></i> Every Saturday | <i class="fas fa-clock"></i> 2:00 PM - 4:00 PM</small>
+                            </div>
+                            <span class="badge bg-info">Active</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card border-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="text-success">Career Guidance Workshop</h6>
+                                <p class="card-text small">Industry experts share career insights</p>
+                                <small class="text-muted"><i class="fas fa-calendar"></i> Next Friday | <i class="fas fa-clock"></i> 10:00 AM - 1:00 PM</small>
+                            </div>
+                            <span class="badge bg-success">Upcoming</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card border-warning">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="text-warning">Mental Health Awareness</h6>
+                                <p class="card-text small">Stress management and wellness sessions</p>
+                                <small class="text-muted"><i class="fas fa-calendar"></i> Monthly | <i class="fas fa-clock"></i> 3:00 PM - 5:00 PM</small>
+                            </div>
+                            <span class="badge bg-warning">Monthly</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card border-primary">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="text-primary">Parent-Teacher Meet</h6>
+                                <p class="card-text small">Regular meetings to discuss student progress</p>
+                                <small class="text-muted"><i class="fas fa-calendar"></i> Last Saturday | <i class="fas fa-clock"></i> 9:00 AM - 12:00 PM</small>
+                            </div>
+                            <span class="badge bg-primary">Regular</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Impact Metrics -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5><i class="fas fa-chart-line"></i> Community Impact</h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-3">
+                <h3 class="text-primary">85%</h3>
+                <p class="text-muted">Students in Peer Programs</p>
+            </div>
+            <div class="col-md-3">
+                <h3 class="text-success">92%</h3>
+                <p class="text-muted">Program Satisfaction</p>
+            </div>
+            <div class="col-md-3">
+                <h3 class="text-info">150+</h3>
+                <p class="text-muted">Monthly Activities</p>
+            </div>
+            <div class="col-md-3">
+                <h3 class="text-warning">78%</h3>
+                <p class="text-muted">Improved Academic Performance</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function assignMentee(mentorId) {
+    if (confirm('Assign at-risk students to this peer mentor?')) {
+        alert('Mentor assignment interface would open here for mentor ID: ' + mentorId);
+    }
+}
+
+function contactNGO(ngoName) {
+    alert('Contact interface would open for: ' + ngoName + '\n\nThis would include:\n- Email integration\n- Phone contact\n- Program scheduling\n- Volunteer coordination');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,415 @@
+{% extends "base.html" %}
+
+{% block title %}Mood Tracker - EduGuard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-smile me-2"></i>Mood Tracker</h1>
+    <div class="text-muted">
+        <i class="fas fa-user-graduate me-2"></i>{{ student.first_name }} {{ student.last_name }}
+    </div>
+</div>
+
+<!-- Mood Statistics -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 style="color: #dc3545;">😢</h4>
+                <h5 class="text-danger">{{ mood_stats[1] or 0 }}</h5>
+                <p class="text-muted small mb-0">Very Bad</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 style="color: #fd7e14;">😔</h4>
+                <h5 class="text-warning">{{ mood_stats[2] or 0 }}</h5>
+                <p class="text-muted small mb-0">Bad</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 style="color: #6c757d;">😐</h4>
+                <h5 class="text-secondary">{{ mood_stats[3] or 0 }}</h5>
+                <p class="text-muted small mb-0">Neutral</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 style="color: #0dcaf0;">😊</h4>
+                <h5 class="text-info">{{ mood_stats[4] or 0 }}</h5>
+                <p class="text-muted small mb-0">Good</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 style="color: #198754;">😄</h4>
+                <h5 class="text-success">{{ mood_stats[5] or 0 }}</h5>
+                <p class="text-muted small mb-0">Great</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4><i class="fas fa-chart-line text-primary"></i></h4>
+                <h5 class="text-primary">{{ mood_history|length }}</h5>
+                <p class="text-muted small mb-0">Total Days</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Today's Mood -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="fas fa-calendar-day me-2"></i>Today's Mood</h5>
+    </div>
+    <div class="card-body">
+        {% set todays_mood = mood_history | selectattr('log_date', 'equalto', date.today()) | first | default(None) %}
+        {% if todays_mood %}
+        <div class="text-center">
+            <div class="mood-display mb-3">
+                <span style="font-size: 4rem;">{{ todays_mood.get_mood_emoji() }}</span>
+            </div>
+            <h4 class="mb-2">{{ todays_mood.get_mood_text() }}</h4>
+            {% if todays_mood.note %}
+            <p class="text-muted">{{ todays_mood.note }}</p>
+            {% endif %}
+            <p class="text-muted small">
+                <i class="fas fa-clock me-1"></i>
+                Logged at {{ todays_mood.logged_at.strftime('%I:%M %p') }}
+            </p>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#moodModal">
+                <i class="fas fa-edit me-1"></i>Update Today's Mood
+            </button>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <div class="mood-display mb-3">
+                <span style="font-size: 4rem; color: #adb5bd;">🤔</span>
+            </div>
+            <h4 class="mb-2">How are you feeling today?</h4>
+            <p class="text-muted">Take a moment to check in with yourself</p>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#moodModal">
+                <i class="fas fa-plus me-1"></i>Log Today's Mood
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Mood History -->
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-history me-2"></i>Mood History (Last 30 Days)</h5>
+    </div>
+    <div class="card-body">
+        {% if mood_history %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Mood</th>
+                        <th>Note</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mood in mood_history %}
+                    <tr>
+                        <td>{{ mood.log_date.strftime('%d %b %Y') }}</td>
+                        <td>
+                            <span class="badge bg-{{ mood.get_mood_color() }} fs-6">
+                                {{ mood.get_mood_emoji() }} {{ mood.get_mood_text() }}
+                            </span>
+                        </td>
+                        <td>{{ mood.note or '-' }}</td>
+                        <td>{{ mood.logged_at.strftime('%I:%M %p') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Mood Chart -->
+        <div class="mt-4">
+            <h6><i class="fas fa-chart-area me-2"></i>Mood Trend</h6>
+            <canvas id="moodChart" width="400" height="100"></canvas>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-smile fa-4x text-muted mb-3"></i>
+            <h4>No Mood History</h4>
+            <p class="text-muted">Start tracking your mood to see patterns and improvements over time.</p>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#moodModal">
+                <i class="fas fa-plus me-1"></i>Log Your First Mood
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Mood Insights -->
+{% if mood_history|length >= 7 %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h5><i class="fas fa-lightbulb me-2"></i>Mood Insights</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6><i class="fas fa-chart-pie me-2"></i>Mood Distribution</h6>
+                <canvas id="moodPieChart" width="200" height="200"></canvas>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="fas fa-brain me-2"></i>Key Insights</h6>
+                <ul class="list-unstyled">
+                    {% set total_moods = mood_history|length %}
+                    {% set positive_moods = mood_stats[4] + mood_stats[5] %}
+                    {% set negative_moods = mood_stats[1] + mood_stats[2] %}
+                    
+                    <li class="mb-2">
+                        <i class="fas fa-smile text-success me-2"></i>
+                        {{ "%.1f"|format((positive_moods / total_moods * 100) if total_moods > 0 else 0) }}% positive days
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-frown text-danger me-2"></i>
+                        {{ "%.1f"|format((negative_moods / total_moods * 100) if total_moods > 0 else 0) }}% challenging days
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-balance-scale text-info me-2"></i>
+                        {{ mood_stats[3] or 0 }} neutral days
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-calendar-check text-primary me-2"></i>
+                        {{ mood_history|length }} days tracked
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Mood Modal -->
+<div class="modal fade" id="moodModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-smile me-2"></i>
+                    {% if todays_mood %}Update Today's Mood{% else %}How are you feeling today?{% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('support.mood') }}">
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <label class="form-label text-center d-block">Select your mood:</label>
+                        <div class="d-flex justify-content-around">
+                            <button type="button" class="btn mood-btn" data-mood="1" data-bs-toggle="tooltip" title="Very Bad">
+                                😢<br><small>Very Bad</small>
+                            </button>
+                            <button type="button" class="btn mood-btn" data-mood="2" data-bs-toggle="tooltip" title="Bad">
+                                😔<br><small>Bad</small>
+                            </button>
+                            <button type="button" class="btn mood-btn" data-mood="3" data-bs-toggle="tooltip" title="Neutral">
+                                😐<br><small>Neutral</small>
+                            </button>
+                            <button type="button" class="btn mood-btn" data-mood="4" data-bs-toggle="tooltip" title="Good">
+                                😊<br><small>Good</small>
+                            </button>
+                            <button type="button" class="btn mood-btn" data-mood="5" data-bs-toggle="tooltip" title="Great">
+                                😄<br><small>Great</small>
+                            </button>
+                        </div>
+                        <input type="hidden" id="moodScore" name="mood_score" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="moodNote" class="form-label">Note (optional)</label>
+                        <textarea class="form-control" id="moodNote" name="note" rows="3"
+                                  placeholder="What's on your mind today? Any specific events or feelings?"></textarea>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-lock me-1"></i>
+                            Your mood entries are private and only visible to you and your support team.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submitMood">
+                        <i class="fas fa-save me-1"></i>
+                        {% if todays_mood %}Update Mood{% else %}Log Mood{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 10px;
+}
+
+.card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.mood-display {
+    transition: all 0.3s ease;
+}
+
+.mood-btn {
+    border: 2px solid #e9ecef;
+    background: white;
+    border-radius: 15px;
+    padding: 20px 15px;
+    margin: 0 5px;
+    transition: all 0.3s ease;
+    min-width: 80px;
+}
+
+.mood-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.mood-btn.selected {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.badge {
+    font-size: 0.8em;
+    padding: 0.5em 1em;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 8px;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    transform: translateY(-1px);
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+#moodChart, #moodPieChart {
+    max-height: 200px;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mood selection
+    const moodButtons = document.querySelectorAll('.mood-btn');
+    const moodScoreInput = document.getElementById('moodScore');
+    
+    moodButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            moodButtons.forEach(b => b.classList.remove('selected'));
+            this.classList.add('selected');
+            moodScoreInput.value = this.dataset.mood;
+        });
+    });
+    
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Mood Chart
+    {% if mood_history %}
+    const moodCtx = document.getElementById('moodChart').getContext('2d');
+    const moodData = {
+        labels: [{% for mood in mood_history[:7] %}'{{ mood.log_date.strftime('%d %b') }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Mood Score',
+            data: [{% for mood in mood_history[:7] %}{{ mood.mood_score }}{% if not loop.last %},{% endif %}{% endfor %}],
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    };
+    
+    new Chart(moodCtx, {
+        type: 'line',
+        data: moodData,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 5,
+                    ticks: {
+                        stepSize: 1,
+                        callback: function(value) {
+                            const labels = ['', '😢', '😔', '😐', '😊', '😄'];
+                            return labels[value] || value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Mood Pie Chart
+    {% if mood_history|length >= 7 %}
+    const pieCtx = document.getElementById('moodPieChart').getContext('2d');
+    const pieData = {
+        labels: ['Very Bad', 'Bad', 'Neutral', 'Good', 'Great'],
+        datasets: [{
+            data: [{{ mood_stats[1] or 0 }}, {{ mood_stats[2] or 0 }}, {{ mood_stats[3] or 0 }}, {{ mood_stats[4] or 0 }}, {{ mood_stats[5] or 0 }}],
+            backgroundColor: ['#dc3545', '#fd7e14', '#6c757d', '#0dcaf0', '#198754']
+        }]
+    };
+    
+    new Chart(pieCtx, {
+        type: 'doughnut',
+        data: pieData,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    {% endif %}
+    {% endif %}
+});
+</script>
+{% endblock %}

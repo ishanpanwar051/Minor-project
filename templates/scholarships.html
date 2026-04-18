@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Scholarship & Financial Aid{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-rupee-sign"></i> Scholarship & Financial Aid</h1>
+    <div class="text-muted">
+        <i class="fas fa-users"></i> {{ financial_students|length }} Students Need Financial Help
+    </div>
+</div>
+
+<div class="alert alert-info">
+    <h5><i class="fas fa-info-circle"></i> Financial help needed — Guide students about available schemes</h5>
+</div>
+
+<!-- Government Scholarship Schemes -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="fas fa-graduation-cap"></i> Government Scholarship Schemes</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <!-- PM Vidya Lakshmi -->
+            <div class="col-md-6 mb-4">
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">PM Vidya Lakshmi</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Education loan aur scholarship ek jagah. Sarkari aur private banks.</p>
+                        <p class="text-success"><strong>Amount: Up to ₹6.5 Lakh (subsidy)</strong></p>
+                        <div class="d-grid">
+                            <a href="https://vidyalakshmi.co.in" target="_blank" class="btn btn-primary">
+                                <i class="fas fa-external-link-alt"></i> Apply Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NSP -->
+            <div class="col-md-6 mb-4">
+                <div class="card border-info">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0">NSP — National Scholarship Portal</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">SC/ST/OBC/Minority aur merit-based scholarships. State + Central dono.</p>
+                        <p class="text-success"><strong>Amount: ₹1,000 – ₹20,000 per year</strong></p>
+                        <div class="d-grid">
+                            <a href="https://scholarships.gov.in" target="_blank" class="btn btn-info">
+                                <i class="fas fa-external-link-alt"></i> Apply Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mukhyamantri Medhavi Vidyarthi -->
+            <div class="col-md-6 mb-4">
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0">Mukhyamantri Medhavi Vidyarthi</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Madhya Pradesh residents — 70%+ in 12th grade for fee waiver.</p>
+                        <p class="text-success"><strong>Amount: Full fees (state colleges)</strong></p>
+                        <div class="d-grid">
+                            <a href="https://scholarshipportal.mp.gov.in" target="_blank" class="btn btn-success">
+                                <i class="fas fa-external-link-alt"></i> Apply Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Post Matric SC/ST -->
+            <div class="col-md-6 mb-4">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0">Post Matric SC/ST Scholarship</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">SC/ST students — tuition + maintenance allowance both.</p>
+                        <p class="text-success"><strong>Amount: ₹5,400 – ₹12,000 per year</strong></p>
+                        <div class="d-grid">
+                            <a href="https://www.ugc.ac.in" target="_blank" class="btn btn-warning">
+                                <i class="fas fa-external-link-alt"></i> Apply Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pragati Scholarship -->
+            <div class="col-md-6 mb-4">
+                <div class="card border-danger">
+                    <div class="card-header bg-danger text-white">
+                        <h6 class="mb-0">Pragati Scholarship (Girls)</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Girls in technical education — AICTE scheme for female students.</p>
+                        <p class="text-success"><strong>Amount: ₹50,000 per year</strong></p>
+                        <div class="d-grid">
+                            <a href="https://www.aicte-india.org/pragati" target="_blank" class="btn btn-danger">
+                                <i class="fas fa-external-link-alt"></i> Apply Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AICTE Saksham -->
+            <div class="col-md-6 mb-4">
+                <div class="card border-secondary">
+                    <div class="card-header bg-secondary text-white">
+                        <h6 class="mb-0">AICTE Saksham Scholarship</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Differently-abled students — technical education support.</p>
+                        <p class="text-success"><strong>Amount: ₹50,000 per year</strong></p>
+                        <div class="d-grid">
+                            <a href="https://www.aicte-india.org/saksham" target="_blank" class="btn btn-secondary">
+                                <i class="fas fa-external-link-alt"></i> Apply Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Students Needing Financial Help -->
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-users"></i> Financial Help Needed — {{ financial_students|length }} Students</h5>
+        <small class="text-muted">These students are marked with financial_issues flag</small>
+    </div>
+    <div class="card-body">
+        {% if financial_students %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Department</th>
+                        <th>Risk Level</th>
+                        <th>Attendance</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in financial_students %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                        {{ student.first_name[0] }}{{ student.last_name[0] }}
+                                    </div>
+                                </div>
+                                <div>
+                                    <strong>{{ student.first_name }} {{ student.last_name }}</strong><br>
+                                    <small class="text-muted">{{ student.student_id }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ student.department or 'N/A' }}</td>
+                        <td>
+                            {% if student.risk_profile %}
+                            <span class="badge {% if student.risk_profile.risk_level == 'Critical' %}bg-dark{% elif student.risk_profile.risk_level == 'High' %}bg-danger{% elif student.risk_profile.risk_level == 'Medium' %}bg-warning{% else %}bg-success{% endif %}">
+                                {{ student.risk_profile.risk_level }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if student.risk_profile %}
+                            {{ student.risk_profile.attendance_rate|round(1) }}%
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="createInterventionPlan({{ student.id }})">
+                                <i class="fas fa-hands-helping"></i> Intervention Plan
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-success">
+            <h6><i class="fas fa-check-circle"></i> No students marked with financial issues.</h6>
+            <p class="mb-0">All students are currently not flagged for financial issues.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function createInterventionPlan(studentId) {
+    window.location.href = '/intervention?highlight=' + studentId;
+}
+</script>
+{% endblock %}

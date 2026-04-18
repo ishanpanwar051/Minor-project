@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Parent Dashboard - EduGuard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-user-graduate me-2"></i>Parent Dashboard</h1>
+    <div class="text-muted">
+        <i class="fas fa-user"></i> {{ current_user.email }}
+    </div>
+</div>
+
+<div class="row">
+    <!-- Student Information Card -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-user me-2"></i>Student Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Name:</strong> {{ student.first_name }} {{ student.last_name }}</p>
+                        <p><strong>Student ID:</strong> {{ student.id }}</p>
+                        <p><strong>Department:</strong> {{ student.department }}</p>
+                        <p><strong>Year:</strong> {{ student.year }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Email:</strong> {{ student.email }}</p>
+                        <p><strong>Phone:</strong> {{ student.phone }}</p>
+                        <p><strong>Your Email:</strong> {{ student.parent_email }}</p>
+                        <p><strong>Your Phone:</strong> {{ student.parent_phone }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Attendance Card -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-calendar-check me-2"></i>Attendance Status</h5>
+            </div>
+            <div class="card-body text-center">
+                <h2 class="mb-3">
+                    {% if attendance_percentage >= 75 %}
+                        <span class="badge bg-success fs-6">{{ "%.1f"|format(attendance_percentage) }}%</span>
+                    {% elif attendance_percentage >= 60 %}
+                        <span class="badge bg-warning fs-6">{{ "%.1f"|format(attendance_percentage) }}%</span>
+                    {% else %}
+                        <span class="badge bg-danger fs-6">{{ "%.1f"|format(attendance_percentage) }}%</span>
+                    {% endif %}
+                </h2>
+                <p class="text-muted">Last 30 Days</p>
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar 
+                        {% if attendance_percentage >= 75 %}bg-success
+                        {% elif attendance_percentage >= 60 %}bg-warning
+                        {% else %}bg-danger{% endif %}" 
+                        style="width: {{ attendance_percentage }}%">
+                        {{ "%.1f"|format(attendance_percentage) }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Risk Status Card -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-exclamation-triangle me-2"></i>Risk Assessment</h5>
+            </div>
+            <div class="card-body">
+                {% if risk_profile %}
+                <div class="text-center mb-3">
+                    <h4>
+                        {% if risk_profile.risk_level == 'Low' %}
+                            <span class="badge bg-success">Low Risk</span>
+                        {% elif risk_profile.risk_level == 'Medium' %}
+                            <span class="badge bg-warning">Medium Risk</span>
+                        {% elif risk_profile.risk_level == 'High' %}
+                            <span class="badge bg-danger">High Risk</span>
+                        {% else %}
+                            <span class="badge bg-dark">Critical Risk</span>
+                        {% endif %}
+                    </h4>
+                </div>
+                
+                {% if risk_profile.risk_reasons %}
+                <h6>Risk Factors:</h6>
+                <ul class="list-unstyled">
+                    {% for reason in risk_profile.risk_reasons.split(',') %}
+                    <li><i class="fas fa-exclamation-circle text-warning me-2"></i>{{ reason.strip() }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>
+                        Last updated: {{ risk_profile.updated_at.strftime('%d %b %Y %I:%M %p') if risk_profile.updated_at else 'Not available' }}
+                    </small>
+                </div>
+                {% else %}
+                <p class="text-muted text-center">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No risk assessment available at this time.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Messages Card -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-comments me-2"></i>Messages
+                    {% if unread_count > 0 %}
+                        <span class="badge bg-danger ms-2">{{ unread_count }} New</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                {% if unread_count > 0 %}
+                <p class="text-muted">You have {{ unread_count }} unread message{{ 's' if unread_count > 1 else '' }} from faculty.</p>
+                {% else %}
+                <p class="text-muted">No new messages from faculty.</p>
+                {% endif %}
+                
+                <a href="{{ url_for('parent.messages') }}" class="btn btn-primary">
+                    <i class="fas fa-envelope me-2"></i>View Messages
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Attendance Records -->
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-history me-2"></i>Recent Attendance Records</h5>
+    </div>
+    <div class="card-body">
+        {% if attendance_records %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Course</th>
+                        <th>Status</th>
+                        <th>Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in attendance_records %}
+                    <tr>
+                        <td>{{ record.date.strftime('%d %b %Y') }}</td>
+                        <td>{{ record.course or 'N/A' }}</td>
+                        <td>
+                            {% if record.status == 'Present' %}
+                                <span class="badge bg-success">Present</span>
+                            {% elif record.status == 'Absent' %}
+                                <span class="badge bg-danger">Absent</span>
+                            {% else %}
+                                <span class="badge bg-warning">Late</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ record.remarks or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center">
+            <i class="fas fa-calendar-times me-2"></i>
+            No attendance records available for the last 30 days.
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 10px;
+}
+
+.card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.badge {
+    font-size: 0.8em;
+    padding: 0.5em 1em;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 8px;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    transform: translateY(-1px);
+}
+</style>
+{% endblock %}

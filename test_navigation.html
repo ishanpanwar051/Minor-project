@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Navigation Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Navigation Test</h2>
+        
+        <div class="mb-3">
+            <h4>Test 1: Check Bootstrap Tabs</h4>
+            <ul class="nav nav-pills" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#test1">Test Tab 1</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#test2">Test Tab 2</button>
+                </li>
+            </ul>
+            
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="test1">Content 1</div>
+                <div class="tab-pane fade" id="test2">Content 2</div>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <h4>Test 2: Check onClick Functions</h4>
+            <button onclick="testClick('Button 1')" class="btn btn-primary">Test Button 1</button>
+            <button onclick="testClick('Button 2')" class="btn btn-secondary">Test Button 2</button>
+            <div id="clickResult"></div>
+        </div>
+        
+        <div class="mb-3">
+            <h4>Test 3: Check API Calls</h4>
+            <button onclick="testAPI()" class="btn btn-success">Test API</button>
+            <div id="apiResult"></div>
+        </div>
+    </div>
+    
+    <script>
+        function testClick(buttonName) {
+            document.getElementById('clickResult').innerHTML = `Clicked: ${buttonName}`;
+            console.log('Test click:', buttonName);
+        }
+        
+        function testAPI() {
+            fetch('/scholarship/api/scholarships')
+                .then(response => {
+                    document.getElementById('apiResult').innerHTML = `API Status: ${response.status}`;
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('API Data:', data);
+                    document.getElementById('apiResult').innerHTML += `<br>Data: ${JSON.stringify(data)}`;
+                })
+                .catch(error => {
+                    console.error('API Error:', error);
+                    document.getElementById('apiResult').innerHTML += `<br>Error: ${error}`;
+                });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block title %}Schedule Counselling - Student Dropout Prevention System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-calendar-check"></i> Schedule Counselling Sessions</h1>
+    <div class="text-muted">
+        <i class="fas fa-users"></i> {{ at_risk_students|length }} Students Need Counselling
+    </div>
+</div>
+
+<!-- Counselling Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center bg-warning text-white">
+            <div class="card-body">
+                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                <h4>{{ at_risk_students|length }}</h4>
+                <p class="card-text">Need Counselling</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <i class="fas fa-user-tie fa-2x mb-2"></i>
+                <h4>{{ counsellors|length }}</h4>
+                <p class="card-text">Available Counsellors</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <i class="fas fa-calendar-alt fa-2x mb-2"></i>
+                <h4>{{ upcoming_sessions|length }}</h4>
+                <p class="card-text">Upcoming Sessions</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-primary text-white">
+            <div class="card-body">
+                <i class="fas fa-clock fa-2x mb-2"></i>
+                <h4>24</h4>
+                <p class="card-text">Hours Available</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Schedule New Session -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-plus-circle"></i> Schedule New Counselling Session</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Select Student *</label>
+                                <select class="form-select" name="student_id" required>
+                                    <option value="">Choose student requiring counselling...</option>
+                                    {% for student in at_risk_students %}
+                                    <option value="{{ student.id }}">
+                                        {{ student.first_name }} {{ student.last_name }} ({{ student.student_id }})
+                                        - {{ student.risk_profile.risk_level }} Risk
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Counsellor *</label>
+                                <select class="form-select" name="counsellor_id" required>
+                                    <option value="">Choose counsellor...</option>
+                                    {% for counsellor in counsellors %}
+                                    <option value="{{ counsellor.id }}">{{ counsellor.first_name }} {{ counsellor.last_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Session Date & Time *</label>
+                                <input type="datetime-local" class="form-control" name="session_date" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Session Type *</label>
+                                <select class="form-select" name="session_type" required>
+                                    <option value="">Select session type...</option>
+                                    <option value="Individual">Individual Counselling</option>
+                                    <option value="Group">Group Session</option>
+                                    <option value="Crisis">Crisis Intervention</option>
+                                    <option value="Career">Career Guidance</option>
+                                    <option value="Academic">Academic Support</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Session Notes</label>
+                        <textarea class="form-control" name="notes" rows="4" placeholder="Reason for counselling session, specific concerns, expected outcomes..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="follow_up_required" id="follow_up" checked>
+                            <label class="form-check-label" for="follow_up">
+                                Follow-up session required
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="notify_parent" id="notify_parent" checked>
+                            <label class="form-check-label" for="notify_parent">
+                                Send notification to parent/guardian
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-calendar-plus"></i> Schedule Session
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Counselling Guidelines -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Counselling Guidelines</h5>
+            </div>
+            <div class="card-body">
+                <h6>Session Types:</h6>
+                <ul class="small">
+                    <li><strong>Individual:</strong> One-on-one personal counselling</li>
+                    <li><strong>Group:</strong> Small group sessions (3-5 students)</li>
+                    <li><strong>Crisis:</strong> Emergency intervention required</li>
+                    <li><strong>Career:</strong> Career guidance and planning</li>
+                    <li><strong>Academic:</strong> Study skills and support</li>
+                </ul>
+                
+                <h6>Best Practices:</h6>
+                <ul class="small">
+                    <li>Maintain confidentiality</li>
+                    <li>Document all sessions</li>
+                    <li>Follow up regularly</li>
+                    <li>Involve parents when appropriate</li>
+                    <li>Refer to specialists if needed</li>
+                </ul>
+                
+                <div class="alert alert-info small">
+                    <strong>Remember:</strong> Each session should have clear objectives and expected outcomes.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upcoming Sessions -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5><i class="fas fa-list"></i> Upcoming Counselling Sessions</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Student</th>
+                        <th>Counsellor</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in upcoming_sessions %}
+                    <tr>
+                        <td>
+                            <strong>{{ session.session_date.strftime('%d %b %Y') }}</strong><br>
+                            <small class="text-muted">{{ session.session_date.strftime('%I:%M %p') }}</small>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="me-2">
+                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 12px;">
+                                        {{ session.student.first_name[0] }}{{ session.student.last_name[0] }}
+                                    </div>
+                                </div>
+                                <div>
+                                    <strong>{{ session.student.first_name }} {{ session.student.last_name }}</strong><br>
+                                    <small class="text-muted">{{ session.student.student_id }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {{ session.counsellor.first_name }} {{ session.counsellor.last_name }}
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ session.session_type }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-warning">Scheduled</span>
+                            {% if session.follow_up_required %}
+                            <br><small class="text-muted"><i class="fas fa-redo"></i> Follow-up needed</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-success" onclick="completeSession({{ session.id }})">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-outline-warning" onclick="rescheduleSession({{ session.id }})">
+                                    <i class="fas fa-calendar"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="cancelSession({{ session.id }})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No upcoming sessions scheduled</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Session History -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5><i class="fas fa-history"></i> Recent Session History</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-chart-line"></i> Session Statistics</h6>
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <strong>24</strong><br>
+                            <small class="text-muted">Sessions this month</small>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>87%</strong><br>
+                            <small class="text-muted">Attendance rate</small>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>4.2</strong><br>
+                            <small class="text-muted">Average rating</small>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>92%</strong><br>
+                            <small class="text-muted">Positive outcomes</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Set minimum date to today for datetime input
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.querySelector('input[name="session_date"]');
+    if (dateInput) {
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000;
+        const localISOTime = (new Date(now - offset)).toISOString().slice(0, 16);
+        dateInput.min = localISOTime;
+    }
+});
+
+function completeSession(sessionId) {
+    if (confirm('Mark this session as completed?')) {
+        alert('Session completion interface would open here for session ID: ' + sessionId);
+    }
+}
+
+function rescheduleSession(sessionId) {
+    if (confirm('Reschedule this counselling session?')) {
+        alert('Rescheduling interface would open here for session ID: ' + sessionId);
+    }
+}
+
+function cancelSession(sessionId) {
+    if (confirm('Cancel this counselling session?')) {
+        alert('Session cancellation interface would open here for session ID: ' + sessionId);
+    }
+}
+</script>
+{% endblock %}

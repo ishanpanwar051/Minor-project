@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - EduGuard AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 25px;
+            transition: transform 0.3s ease;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: scale(1.05);
+        }
+        .nav-pills .nav-link {
+            border-radius: 10px;
+            margin: 0 5px;
+        }
+        .nav-pills .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .ai-badge {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        .trend-up {
+            color: #28a745;
+        }
+        .trend-down {
+            color: #dc3545;
+        }
+        .feature-icon {
+            font-size: 2.5rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        .alert-card {
+            border-left: 4px solid #dc3545;
+            background: #fff5f5;
+        }
+        .success-card {
+            border-left: 4px solid #28a745;
+            background: #f8fff8;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('main.admin_dashboard') }}">
+                <i class="fas fa-shield-alt"></i> EduGuard AI Admin
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-shield"></i> {{ current_user.username }}
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('scholarship.manage_scholarships') }}">Scholarships</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('scholarship.view_applications') }}">Applications</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('counselling.admin_manage') }}">Counselling</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('ai_dashboard.admin_dashboard') }}">AI Dashboard</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Welcome Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="dashboard-card">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h2 class="mb-3">
+                                <i class="fas fa-chart-line"></i> Administrative Dashboard
+                                <span class="ai-badge ms-2">AI Powered</span>
+                            </h2>
+                            <p class="text-muted">Complete system overview with AI-powered insights</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-primary" onclick="refreshData()">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                                <button type="button" class="btn btn-outline-success" onclick="exportReport()">
+                                    <i class="fas fa-download"></i> Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="row mb-4">
+            <div class="col-md-2">
+                <div class="stat-card">
+                    <i class="fas fa-users fa-2x mb-3"></i>
+                    <h3>{{ total_students }}</h3>
+                    <p>Total Students</p>
+                    <small class="text-white-50">
+                        <i class="fas fa-arrow-up trend-up"></i> +12% this month
+                    </small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card">
+                    <i class="fas fa-award fa-2x mb-3"></i>
+                    <h3>{{ total_scholarships }}</h3>
+                    <p>Scholarships</p>
+                    <small class="text-white-50">
+                        <span class="trend-up">{{ active_scholarships }} active</span>
+                    </small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card">
+                    <i class="fas fa-file-alt fa-2x mb-3"></i>
+                    <h3>{{ total_applications }}</h3>
+                    <p>Applications</p>
+                    <small class="text-white-50">
+                        <span class="trend-up">{{ recent_applications }} this month</span>
+                    </small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card">
+                    <i class="fas fa-clock fa-2x mb-3"></i>
+                    <h3>{{ pending_applications }}</h3>
+                    <p>Pending</p>
+                    <small class="text-white-50">Need review</small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card">
+                    <i class="fas fa-percentage fa-2x mb-3"></i>
+                    <h3>{{ "%.1f"|format(success_rate) }}%</h3>
+                    <p>Success Rate</p>
+                    <small class="text-white-50">Approval rate</small>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card">
+                    <i class="fas fa-comments fa-2x mb-3"></i>
+                    <h3>{{ counselling_requests }}</h3>
+                    <p>Counselling</p>
+                    <small class="text-white-50">Active sessions</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <ul class="nav nav-pills" id="adminTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                            <i class="fas fa-home"></i> Overview
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button" role="tab">
+                            <i class="fas fa-chart-bar"></i> Analytics
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="predictions-tab" data-bs-toggle="tab" data-bs-target="#predictions" type="button" role="tab">
+                            <i class="fas fa-brain"></i> AI Predictions
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="alerts-tab" data-bs-toggle="tab" data-bs-target="#alerts" type="button" role="tab">
+                            <i class="fas fa-exclamation-triangle"></i> Alerts
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="adminTabsContent">
+            <!-- Overview Tab -->
+            <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                <div class="row">
+                    <!-- Application Trends -->
+                    <div class="col-md-8">
+                        <div class="dashboard-card">
+                            <h5><i class="fas fa-chart-line"></i> Application Trends</h5>
+                            <canvas id="trendsChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Department Distribution -->
+                    <div class="col-md-4">
+                        <div class="dashboard-card">
+                            <h5><i class="fas fa-users"></i> Department Distribution</h5>
+                            <canvas id="deptChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <!-- Top Scholarships -->
+                    <div class="col-md-6">
+                        <div class="dashboard-card">
+                            <h5><i class="fas fa-trophy"></i> Top Performing Scholarships</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Scholarship</th>
+                                            <th>Applications</th>
+                                            <th>Success Rate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for scholarship in top_scholarships %}
+                                        <tr>
+                                            <td>{{ scholarship.title }}</td>
+                                            <td>{{ scholarship.application_count }}</td>
+                                            <td>
+                                                <div class="progress" style="height: 20px;">
+                                                    <div class="progress-bar" style="width: {{ "%.0f"|format(scholarship.avg_success_prob * 100) }}%">
+                                                        {{ "%.1f"|format(scholarship.avg_success_prob * 100) }}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Recent Activity -->
+                    <div class="col-md-6">
+                        <div class="dashboard-card">
+                            <h5><i class="fas fa-clock"></i> Recent Activity</h5>
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-file-alt text-primary"></i>
+                                        <span class="ms-2">New scholarship application</span>
+                                    </div>
+                                    <small class="text-muted">2 mins ago</small>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-user-plus text-success"></i>
+                                        <span class="ms-2">New student registered</span>
+                                    </div>
+                                    <small class="text-muted">15 mins ago</small>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-comments text-info"></i>
+                                        <span class="ms-2">Counselling request submitted</span>
+                                    </div>
+                                    <small class="text-muted">1 hour ago</small>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-check text-success"></i>
+                                        <span class="ms-2">Application approved</span>
+                                    </div>
+                                    <small class="text-muted">2 hours ago</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div class="tab-pane fade" id="analytics" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="dashboard-card">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5><i class="fas fa-chart-bar"></i> Detailed Analytics</h5>
+                                <select class="form-select" style="width: 200px;" onchange="updateAnalytics(this.value)">
+                                    <option value="7">Last 7 days</option>
+                                    <option value="30" selected>Last 30 days</option>
+                                    <option value="90">Last 90 days</option>
+                                </select>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Application Status Distribution</h6>
+                                    <canvas id="statusChart"></canvas>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>GPA Distribution</h6>
+                                    <canvas id="gpaChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Predictions Tab -->
+            <div class="tab-pane fade" id="predictions" role="tabpanel">
+                <div class="row">
+                    <!-- Scholarship Demand Predictions -->
+                    <div class="col-md-6">
+                        <div class="dashboard-card">
+                            <h5><i class="fas fa-chart-line"></i> Scholarship Demand Predictions</h5>
+                            <canvas id="demandChart"></canvas>
+                            <div class="mt-3">
+                                <small class="text-muted">AI-powered predictions based on historical data and trends</small>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Success Rate Predictions -->
+                    <div class="col-md-6">
+                        <div class="dashboard-card">
+                            <h5><i class="fas fa-percentage"></i> Success Rate Predictions</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Scholarship</th>
+                                            <th>Current</th>
+                                            <th>Predicted</th>
+                                            <th>Confidence</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="predictionsTable">
+                                        <!-- Populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <!-- At-Risk Students -->
+                    <div class="col-md-6">
+                        <div class="dashboard-card">
+                            <h5><i class="fas fa-exclamation-triangle"></i> At-Risk Students</h5>
+                            <div id="atRiskStudents">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Scholarship Recommendations -->
+                    <div class="col-md-6">
+                        <div class="dashboard-card">
+                            <h5><i class="fas fa-lightbulb"></i> AI Scholarship Recommendations</h5>
+                            <div id="scholarshipRecommendations">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts Tab -->
+            <div class="tab-pane fade" id="alerts" role="tabpanel">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="dashboard-card">
+                            <h5><i class="fas fa-bell"></i> System Alerts & Notifications</h5>
+                            
+                            <!-- Critical Alerts -->
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Critical:</strong> 5 scholarship applications have been pending for over 7 days
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+
+                            <!-- Warning Alerts -->
+                            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <strong>Warning:</strong> 3 scholarships expire in the next 48 hours
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+
+                            <!-- Info Alerts -->
+                            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>Info:</strong> AI analysis shows 23% increase in scholarship applications this month
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+
+                            <!-- Success Alerts -->
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <i class="fas fa-check-circle"></i>
+                                <strong>Success:</strong> All counselling requests from this week have been scheduled
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Trends Chart
+        const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+        new Chart(trendsCtx, {
+            type: 'line',
+            data: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                datasets: [{
+                    label: 'Applications',
+                    data: [12, 19, 15, {{ recent_applications }}],
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4
+                }, {
+                    label: 'Approvals',
+                    data: [8, 12, 10, 14],
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' }
+                }
+            }
+        });
+
+        // Department Chart
+        const deptCtx = document.getElementById('deptChart').getContext('2d');
+        const deptLabels = [{% for dept in dept_distribution %}'{{ dept.department }}'{% if not loop.last %},{% endif %}{% endfor %}];
+        const deptData = [{% for dept in dept_distribution %}{{ dept.student_count }}{% if not loop.last %},{% endif %}{% endfor %}];
+        new Chart(deptCtx, {
+            type: 'doughnut',
+            data: {
+                labels: deptLabels,
+                datasets: [{
+                    data: deptData,
+                    backgroundColor: ['#667eea', '#764ba2', '#ff6b6b', '#ee5a24', '#feca57']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        // Status Chart
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        new Chart(statusCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Pending', 'Approved', 'Rejected', 'Under Review'],
+                datasets: [{
+                    data: [{{ pending_applications }}, {{ approved_applications }}, {{ rejected_applications }}, 8],
+                    backgroundColor: ['#ffc107', '#28a745', '#dc3545', '#17a2b8']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        // GPA Chart
+        const gpaCtx = document.getElementById('gpaChart').getContext('2d');
+        new Chart(gpaCtx, {
+            type: 'bar',
+            data: {
+                labels: ['2.0-2.5', '2.5-3.0', '3.0-3.5', '3.5-4.0'],
+                datasets: [{
+                    label: 'Students',
+                    data: [5, 12, 18, 15],
+                    backgroundColor: '#667eea'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // Demand Chart
+        const demandCtx = document.getElementById('demandChart').getContext('2d');
+        new Chart(demandCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Next Month', 'Month 2', 'Month 3'],
+                datasets: [{
+                    label: 'Predicted Applications',
+                    data: [45, 52, 48],
+                    backgroundColor: '#ff6b6b'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // Load AI predictions
+        function loadPredictions() {
+            fetch('/ai-dashboard/api/predictions')
+                .then(response => response.json())
+                .then(data => {
+                    // Update predictions table
+                    const table = document.getElementById('predictionsTable');
+                    table.innerHTML = data.success_predictions.map(pred => `
+                        <tr>
+                            <td>${pred.scholarship}</td>
+                            <td>${pred.current_success_rate.toFixed(1)}%</td>
+                            <td>${pred.predicted_success_rate.toFixed(1)}%</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" style="width: ${pred.confidence}%">
+                                        ${pred.confidence}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+
+                    // Update at-risk students
+                    const atRiskDiv = document.getElementById('atRiskStudents');
+                    atRiskDiv.innerHTML = data.at_risk_students.slice(0, 5).map(student => `
+                        <div class="alert alert-warning py-2 mb-2">
+                            <strong>${student.student.first_name} ${student.student.last_name}</strong>
+                            <br><small>Risk Score: ${student.risk_score.toFixed(0)}% - ${student.risk_factors.join(', ')}</small>
+                        </div>
+                    `).join('');
+
+                    // Update scholarship recommendations
+                    const recDiv = document.getElementById('scholarshipRecommendations');
+                    recDiv.innerHTML = data.scholarship_recommendations.map(rec => `
+                        <div class="alert alert-info py-2 mb-2">
+                            <strong>${rec.type} Scholarship</strong>
+                            <br><small>${rec.reason}</small>
+                            <br><small class="text-muted">Priority: ${rec.priority}</small>
+                        </div>
+                    `).join('');
+                });
+        }
+
+        // Load predictions on page load
+        loadPredictions();
+
+        // Refresh data
+        function refreshData() {
+            location.reload();
+        }
+
+        // Export report
+        function exportReport() {
+            alert('Export functionality would be implemented here');
+        }
+
+        // Update analytics
+        function updateAnalytics(days) {
+            console.log('Updating analytics for last', days, 'days');
+            // Implementation would fetch new data based on selected time range
+        }
+    </script>
+</body>
+</html>

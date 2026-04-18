@@ -43,7 +43,7 @@ def create_app(config_name='default'):
         socketio = None
     
     # Configure login
-    login_manager.login_view = 'main.login'
+    login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Please log in to access this page.'
     login_manager.login_message_category = 'info'
     
@@ -55,6 +55,42 @@ def create_app(config_name='default'):
     # Register blueprints
     from routes import main_bp
     app.register_blueprint(main_bp)
+    
+    # Register auth blueprint with RBAC
+    from auth_routes import auth_bp
+    app.register_blueprint(auth_bp)
+    
+    # Register scholarship system
+    from scholarship_routes import scholarship_bp
+    app.register_blueprint(scholarship_bp)
+    
+    # Register AI Dashboard
+    from ai_dashboard_routes import ai_dashboard_bp
+    app.register_blueprint(ai_dashboard_bp)
+    
+    # Register AI Assistant
+    from ai_assistant_routes import ai_assistant_bp
+    app.register_blueprint(ai_assistant_bp)
+    
+    # Register Counselling System
+    from counselling_routes import counselling_bp
+    app.register_blueprint(counselling_bp)
+    
+    # Register parent blueprint
+    from parent_routes import parent_bp
+    app.register_blueprint(parent_bp)
+    
+    # Register support blueprint
+    from support_routes import support_bp
+    app.register_blueprint(support_bp)
+    
+    # Register analysis blueprint
+    from analysis_routes import analysis_bp
+    app.register_blueprint(analysis_bp)
+    
+    # Register daily update system
+    from update_routes import update_bp
+    app.register_blueprint(update_bp)
     
     # Error handlers
     @app.errorhandler(404)
@@ -75,6 +111,10 @@ def create_app(config_name='default'):
     # Create database tables
     with app.app_context():
         try:
+            # Import all models to ensure they're registered
+            from models_parent import ParentMessage
+            from models_support import StudentGoal, MoodLog
+            
             db.create_all()
             app.logger.info('Database tables created successfully')
         except Exception as e:

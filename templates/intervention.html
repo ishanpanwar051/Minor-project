@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Intervention Plan - Student Dropout Prevention System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-hands-helping"></i> Intervention Plan</h1>
+    <div class="text-muted">
+        <i class="fas fa-exclamation-triangle text-danger"></i> {{ at_risk_students|length }} At-Risk Students
+    </div>
+</div>
+
+<!-- Intervention Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center bg-danger text-white">
+            <div class="card-body">
+                <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
+                <h4>{{ at_risk_students|selectattr('risk_profile.risk_level','equalto','Critical')|list|length }}</h4>
+                <p class="card-text">Critical Risk</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-warning text-white">
+            <div class="card-body">
+                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                <h4>{{ at_risk_students|selectattr('risk_profile.risk_level','equalto','High')|list|length }}</h4>
+                <p class="card-text">High Risk</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <i class="fas fa-user-tie fa-2x mb-2"></i>
+                <h4>{{ faculty_list|length }}</h4>
+                <p class="card-text">Available Mentors</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                <h4>0</h4>
+                <p class="card-text">Interventions Today</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- At-Risk Students Table -->
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-list"></i> Students Requiring Intervention</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Risk Level</th>
+                        <th>Key Issues</th>
+                        <th>Suggested Actions</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in at_risk_students %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                        {{ student.first_name[0] }}{{ student.last_name[0] }}
+                                    </div>
+                                </div>
+                                <div>
+                                    <strong>{{ student.first_name }} {{ student.last_name }}</strong><br>
+                                    <small class="text-muted">{{ student.student_id }} | {{ student.department }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge {% if student.risk_profile.risk_level == 'Critical' %}bg-dark{% elif student.risk_profile.risk_level == 'High' %}bg-danger{% else %}bg-warning{% endif %}">
+                                {{ student.risk_profile.risk_level }}
+                            </span>
+                            <br><small class="text-muted">Score: {{ student.risk_profile.risk_score|round(1) }}</small>
+                        </td>
+                        <td>
+                            <small>
+                                {% if student.risk_profile.financial_issues %}<span class="badge bg-outline-danger me-1">Financial</span>{% endif %}
+                                {% if student.risk_profile.family_problems %}<span class="badge bg-outline-danger me-1">Family</span>{% endif %}
+                                {% if student.risk_profile.health_issues %}<span class="badge bg-outline-danger me-1">Health</span>{% endif %}
+                                {% if student.risk_profile.social_isolation %}<span class="badge bg-outline-danger me-1">Social</span>{% endif %}
+                                {% if student.risk_profile.attendance_rate < 70 %}<span class="badge bg-outline-warning me-1">Low Attendance</span>{% endif %}
+                                {% if student.gpa < 5.0 %}<span class="badge bg-outline-warning me-1">Low GPA</span>{% endif %}
+                            </small>
+                        </td>
+                        <td>
+                            <div class="small">
+                                {% if student.risk_profile.financial_issues %}
+                                <div class="text-danger mb-1">
+                                    <i class="fas fa-rupee-sign"></i> Apply for scholarships
+                                </div>
+                                {% endif %}
+                                {% if student.risk_profile.family_problems or student.risk_profile.social_isolation %}
+                                <div class="text-warning mb-1">
+                                    <i class="fas fa-headset"></i> Schedule counselling
+                                </div>
+                                {% endif %}
+                                {% if student.risk_profile.attendance_rate < 70 %}
+                                <div class="text-info mb-1">
+                                    <i class="fas fa-phone"></i> Parent notification
+                                </div>
+                                {% endif %}
+                                <div class="text-success mb-1">
+                                    <i class="fas fa-user-tie"></i> Assign mentor
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="btn-group-vertical btn-group-sm">
+                                <button class="btn btn-outline-success btn-sm" onclick="assignMentor({{ student.id }})">
+                                    <i class="fas fa-user-plus"></i> Assign Mentor
+                                </button>
+                                <button class="btn btn-outline-info btn-sm" onclick="notifyParent({{ student.id }})">
+                                    <i class="fas fa-envelope"></i> Notify Parent
+                                </button>
+                                <button class="btn btn-outline-warning btn-sm" onclick="scheduleCounselling({{ student.id }})">
+                                    <i class="fas fa-calendar"></i> Counselling
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="financialHelp({{ student.id }})">
+                                    <i class="fas fa-hand-holding-usd"></i> Financial Aid
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No at-risk students found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Mentor Assignment Modal -->
+<div class="modal fade" id="mentorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign Mentor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="mentorForm">
+                    <input type="hidden" id="mentor_student_id" name="student_id">
+                    <div class="mb-3">
+                        <label class="form-label">Select Mentor</label>
+                        <select class="form-select" name="mentor_id" required>
+                            <option value="">Choose a faculty member...</option>
+                            {% for faculty in faculty_list %}
+                            <option value="{{ faculty.id }}">{{ faculty.first_name }} {{ faculty.last_name }} ({{ faculty.email }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" name="notes" rows="3" placeholder="Reason for mentor assignment..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitMentorAssignment()">Assign Mentor</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Financial Assistance Modal -->
+<div class="modal fade" id="financialModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Financial Assistance</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="financialForm">
+                    <input type="hidden" id="financial_student_id" name="student_id">
+                    <div class="mb-3">
+                        <label class="form-label">Assistance Type</label>
+                        <select class="form-select" name="assistance_type" required>
+                            <option value="">Select assistance type...</option>
+                            <option value="Scholarship">Scholarship Application</option>
+                            <option value="Fee Waiver">Fee Waiver</option>
+                            <option value="Emergency Fund">Emergency Fund</option>
+                            <option value="Book Allowance">Book Allowance</option>
+                            <option value="Transport Allowance">Transport Allowance</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Amount (₹)</label>
+                        <input type="number" class="form-control" name="amount" placeholder="Enter amount...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" name="notes" rows="3" placeholder="Reason for financial assistance..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitFinancialAssistance()">Submit Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function assignMentor(studentId) {
+    document.getElementById('mentor_student_id').value = studentId;
+    new bootstrap.Modal(document.getElementById('mentorModal')).show();
+}
+
+function notifyParent(studentId) {
+    if (confirm('Send parent notification?')) {
+        fetch(`/api/parent_notification/${studentId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Parent notification sent successfully!');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            });
+    }
+}
+
+function scheduleCounselling(studentId) {
+    window.location.href = '/schedule_counselling?student_id=' + studentId;
+}
+
+function financialHelp(studentId) {
+    document.getElementById('financial_student_id').value = studentId;
+    new bootstrap.Modal(document.getElementById('financialModal')).show();
+}
+
+function submitMentorAssignment() {
+    const form = document.getElementById('mentorForm');
+    const formData = new FormData(form);
+    const studentId = formData.get('student_id');
+    
+    fetch(`/api/assign_mentor/${studentId}`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Mentor assigned successfully!');
+            bootstrap.Modal.getInstance(document.getElementById('mentorModal')).hide();
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+
+function submitFinancialAssistance() {
+    const form = document.getElementById('financialForm');
+    const formData = new FormData(form);
+    const studentId = formData.get('student_id');
+    
+    fetch(`/api/financial_assistance/${studentId}`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Financial assistance request submitted!');
+            bootstrap.Modal.getInstance(document.getElementById('financialModal')).hide();
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+</script>
+{% endblock %}
