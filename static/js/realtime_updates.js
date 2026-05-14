@@ -42,7 +42,7 @@ class RealtimeUpdates {
             return;
         }
         
-        this.socket = io();
+        this.socket = io({ transports: ['polling', 'websocket'] });
         
         this.socket.on('connect', () => {
             console.log('Connected to real-time server');
@@ -108,15 +108,28 @@ class RealtimeUpdates {
     
     handleNotification(data) {
         console.log('Received notification:', data);
+        const notification = this.normalizeNotification(data);
         
         // Show notification toast
-        this.showNotificationToast(data);
+        this.showNotificationToast(notification);
         
         // Update alerts section if exists
-        this.updateAlertsSection(data);
+        this.updateAlertsSection(notification);
         
         // Play notification sound (optional)
-        this.playNotificationSound(data.severity);
+        this.playNotificationSound(notification.severity);
+    }
+
+    normalizeNotification(data) {
+        const payload = data && data.data ? data.data : (data || {});
+        return {
+            ...payload,
+            id: payload.id || data.id,
+            title: payload.title || data.title || 'Notification',
+            description: payload.description || payload.message || data.description || data.message || '',
+            severity: payload.severity || data.severity || 'Info',
+            timestamp: payload.timestamp || data.timestamp || new Date().toISOString()
+        };
     }
     
     handleDashboardUpdate(data) {
@@ -130,6 +143,11 @@ class RealtimeUpdates {
         
         // Update student lists
         this.updateStudentLists(data);
+        
+        // Trigger dashboard stats refresh if loadScholarshipData is available
+        if (typeof window.loadScholarshipData === 'function') {
+            window.loadScholarshipData();
+        }
     }
     
     handleAlertsResponse(data) {
@@ -138,8 +156,26 @@ class RealtimeUpdates {
     }
     
     showNotificationToast(notification) {
-        const toastContainer = document.getElementById('toastContainer') || this.createToastContainer();
+        const toastContainer = document.getElementById('notificationToast') ? document.getElementById('notificationToast').parentElement : this.createToastContainer();
         
+        // Update my existing toast container if it exists
+        const existingToast = document.getElementById('notificationToast');
+        if (existingToast) {
+            const titleEl = document.getElementById('toastTitle');
+            const msgEl = document.getElementById('toastMessage');
+            const headerEl = existingToast.querySelector('.toast-header');
+            
+            if (titleEl) titleEl.textContent = notification.title || 'Notification';
+            if (msgEl) msgEl.textContent = notification.description || notification.message || '';
+            if (headerEl) {
+                headerEl.className = `toast-header text-white bg-${this.getSeverityColor(notification.severity)} border-0`;
+            }
+            
+            const bsToast = new bootstrap.Toast(existingToast);
+            bsToast.show();
+            return;
+        }
+
         const toast = document.createElement('div');
         toast.className = `toast align-items-center text-white bg-${this.getSeverityColor(notification.severity)} border-0`;
         toast.setAttribute('role', 'alert');
@@ -174,11 +210,12 @@ class RealtimeUpdates {
     }
     
     getSeverityColor(severity) {
-        switch (severity.toLowerCase()) {
+        switch ((severity || 'info').toString().toLowerCase()) {
             case 'critical': return 'danger';
             case 'high': return 'warning';
             case 'medium': return 'info';
             case 'low': return 'success';
+            case 'info': return 'primary';
             default: return 'primary';
         }
     }
@@ -193,9 +230,9 @@ class RealtimeUpdates {
                 const alertElement = this.createAlertElement(alert);
                 alertsContainer.appendChild(alertElement);
             });
-        } else if (data.data) {
+        } else if (data.data || data.title) {
             // Single notification
-            const alertElement = this.createAlertElement(data.data);
+            const alertElement = this.createAlertElement(this.normalizeNotification(data));
             alertsContainer.insertBefore(alertElement, alertsContainer.firstChild);
         }
     }

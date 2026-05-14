@@ -71,6 +71,10 @@ def create_app(config_name='default'):
     # Register AI Assistant
     from ai_assistant_routes import ai_assistant_bp
     app.register_blueprint(ai_assistant_bp)
+
+    # Register general chatbot API used by the standalone chatbot UI
+    from chatbot_routes import chatbot_bp
+    app.register_blueprint(chatbot_bp)
     
     # Register Counselling System
     from counselling_routes import counselling_bp
@@ -108,6 +112,17 @@ def create_app(config_name='default'):
         app.logger.error(f'Unhandled exception: {str(e)}')
         return render_template('errors/500.html'), 500
     
+    # Global redirects
+    @app.route('/login')
+    def login_redirect():
+        from flask import redirect, url_for
+        return redirect(url_for('auth.login'))
+
+    @app.route('/logout')
+    def logout_redirect():
+        from flask import redirect, url_for
+        return redirect(url_for('auth.logout'))
+    
     # Create database tables
     with app.app_context():
         try:
@@ -136,10 +151,10 @@ def run_app():
     with app.app_context():
         create_initial_data()
     
-    print("\n🚀 EduGuard Enhanced Application Starting...")
-    print(f"🌐 Access at: http://127.0.0.1:5000")
-    print(f"🔧 Debug mode: {app.config.get('DEBUG', False)}")
-    print(f"🤖 ML Model: {'Enabled' if socketio else 'Disabled'}")
+    print("\nEduGuard Enhanced Application Starting...")
+    print("Access at: http://127.0.0.1:5001")
+    print(f"Debug mode: {app.config.get('DEBUG', False)}")
+    print(f"Real-time notifications: {'Enabled' if socketio else 'Disabled'}")
     
     if socketio:
         # Run with SocketIO for real-time features
@@ -147,14 +162,15 @@ def run_app():
             app,
             debug=app.config.get('DEBUG', False),
             host='0.0.0.0',
-            port=5000
+            port=5001,
+            allow_unsafe_werkzeug=True
         )
     else:
         # Run without SocketIO
         app.run(
             debug=app.config.get('DEBUG', False),
             host='0.0.0.0',
-            port=5000
+            port=5001
         )
 
 # Create app instance for direct running
@@ -176,7 +192,7 @@ def create_initial_data():
             )
             admin.set_password('admin123')
             db.session.add(admin)
-            print("✅ Created admin user")
+            print("Created admin user")
         
         # Check if faculty user exists
         faculty = User.query.filter_by(email='faculty@eduguard.edu').first()
@@ -188,7 +204,7 @@ def create_initial_data():
             )
             faculty.set_password('faculty123')
             db.session.add(faculty)
-            print("✅ Created faculty user")
+            print("Created faculty user")
         
         # Create sample students
         if Student.query.count() < 5:
@@ -265,12 +281,12 @@ def create_initial_data():
                     )
                     db.session.add(attendance)
             
-            print("✅ Created sample students with data")
+            print("Created sample students with data")
         
         db.session.commit()
-        print("✅ Initial data created successfully")
+        print("Initial data created successfully")
         
-        print("\n🔐 LOGIN CREDENTIALS:")
+        print("\nLOGIN CREDENTIALS:")
         print("=" * 50)
         print("ADMIN: admin@eduguard.edu / admin123")
         print("FACULTY: faculty@eduguard.edu / faculty123")
@@ -278,7 +294,7 @@ def create_initial_data():
         print("=" * 50)
         
     except Exception as e:
-        print(f"❌ Error creating initial data: {str(e)}")
+        print(f"Error creating initial data: {str(e)}")
         if db:
             db.session.rollback()
 

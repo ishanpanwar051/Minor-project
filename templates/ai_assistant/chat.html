@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>AI Assistant Chat</h2>
+    <div class="alert alert-info">The AI Assistant is currently integrated directly into your Student Dashboard. Please go to the dashboard to chat with the AI.</div>
+    <a href="{{ url_for('main.student_dashboard') }}" class="btn btn-primary">Go to Dashboard</a>
+</div>
+{% endblock %}

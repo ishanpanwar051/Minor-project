@@ -250,9 +250,25 @@ def api_student_insights():
     if not student:
         return jsonify({'error': 'Student not found'}), 404
     
+    # Serialize recommendations for JSON
+    serializable_recs = []
+    for rec in get_personalized_recommendations(student):
+        scholarship = rec['scholarship']
+        serializable_recs.append({
+            'scholarship_id': scholarship.id,
+            'title': scholarship.title,
+            'provider': scholarship.provider,
+            'amount': scholarship.amount,
+            'currency': scholarship.currency,
+            'deadline': scholarship.application_deadline.isoformat() if scholarship.application_deadline else None,
+            'status': scholarship.status.value if hasattr(scholarship.status, 'value') else scholarship.status,
+            'score': rec['score'],
+            'reason': rec['reason']
+        })
+
     insights = {
         'academic_performance': get_academic_insights(student),
-        'scholarship_recommendations': get_personalized_recommendations(student),
+        'scholarship_recommendations': serializable_recs,
         'success_probability': calculate_average_success_probability(student),
         'career_suggestions': get_career_suggestions(student),
         'application_tips': generate_application_tips(student)
@@ -267,13 +283,18 @@ def api_student_insights():
 def predict_scholarship_demand():
     """Predict scholarship demand for next period"""
     
+    dialect_name = db.session.get_bind().dialect.name
+    month_bucket = (
+        func.strftime('%Y-%m', ScholarshipApplication.application_date)
+        if dialect_name == 'sqlite'
+        else func.date_trunc('month', ScholarshipApplication.application_date)
+    )
+
     # Historical data
     historical_data = db.session.query(
-        func.date_trunc('month', ScholarshipApplication.application_date).label('month'),
+        month_bucket.label('month'),
         func.count(ScholarshipApplication.id).label('applications')
-    ).group_by(
-        func.date_trunc('month', ScholarshipApplication.application_date)
-    ).order_by('month').limit(12).all()
+    ).group_by(month_bucket).order_by('month').limit(12).all()
     
     # Simple linear regression for prediction
     if len(historical_data) >= 3:

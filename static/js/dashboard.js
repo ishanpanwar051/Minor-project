@@ -181,7 +181,15 @@ function sendMessage() {
     // Clear input
     input.value = '';
     
-    // Send to AI
+    // Show typing indicator
+    const typingMsg = document.createElement('div');
+    typingMsg.className = 'chat-message ai-message';
+    typingMsg.id = 'typingIndicator';
+    typingMsg.innerHTML = '<strong>AI Assistant:</strong> <em>Thinking...</em>';
+    chatContainer.appendChild(typingMsg);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    // Try AI Assistant endpoint first, fallback to simple chat
     fetch('/ai-assistant/api/chat', {
         method: 'POST',
         headers: {
@@ -189,23 +197,74 @@ function sendMessage() {
         },
         body: JSON.stringify({ message: message })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) throw new Error('AI Assistant unavailable');
+        return response.json();
+    })
     .then(data => {
+        // Remove typing indicator
+        const typing = document.getElementById('typingIndicator');
+        if (typing) typing.remove();
+        
         // Add AI response
         const aiMsg = document.createElement('div');
         aiMsg.className = 'chat-message ai-message';
-        aiMsg.innerHTML = '<strong>AI Assistant:</strong> ' + (data.response || 'Sorry, I could not process your request.');
+        let responseText = data.response || 'Sorry, I could not process your request.';
+        aiMsg.innerHTML = '<strong>AI Assistant:</strong> ' + responseText;
         chatContainer.appendChild(aiMsg);
         
-        // Scroll to bottom
+        // Add suggestion buttons if available
+        if (data.suggestions && data.suggestions.length > 0) {
+            const suggestionsDiv = document.createElement('div');
+            suggestionsDiv.className = 'mt-2 d-flex flex-wrap gap-1';
+            data.suggestions.forEach(function(suggestion) {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-outline-primary btn-sm';
+                btn.textContent = suggestion;
+                btn.onclick = function() {
+                    document.getElementById('chatInput').value = suggestion;
+                    sendMessage();
+                };
+                suggestionsDiv.appendChild(btn);
+            });
+            chatContainer.appendChild(suggestionsDiv);
+        }
+        
         chatContainer.scrollTop = chatContainer.scrollHeight;
     })
     .catch(error => {
-        console.error('Error:', error);
-        const errorMsg = document.createElement('div');
-        errorMsg.className = 'chat-message ai-message';
-        errorMsg.innerHTML = '<strong>AI Assistant:</strong> Sorry, there was an error processing your request.';
-        chatContainer.appendChild(errorMsg);
+        console.warn('[FRONTEND] AI Assistant failed, trying fallback:', error);
+        
+        // Fallback to simple chat endpoint
+        const formData = new FormData();
+        formData.append('message', message);
+        
+        fetch('/ai/chat_response', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            const typing = document.getElementById('typingIndicator');
+            if (typing) typing.remove();
+            
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'chat-message ai-message';
+            aiMsg.innerHTML = '<strong>AI Assistant:</strong> ' + (data.response || 'Sorry, I could not process your request.');
+            chatContainer.appendChild(aiMsg);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        })
+        .catch(err => {
+            console.error('[FRONTEND] Both chat endpoints failed:', err);
+            const typing = document.getElementById('typingIndicator');
+            if (typing) typing.remove();
+            
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'chat-message ai-message';
+            errorMsg.innerHTML = '<strong>AI Assistant:</strong> I\'m here to help! You can ask me about study strategies, stress management, career guidance, motivation, or time management.';
+            chatContainer.appendChild(errorMsg);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
     });
 }
 

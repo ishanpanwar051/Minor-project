@@ -4,17 +4,34 @@ Clean, consolidated routing
 """
 
 from app import create_app
-from models import User, Student, Attendance, db, RiskProfile, Counselling, MentorAssignment, Alert
+from models import User, Student, Attendance, db, RiskProfile, Counselling, MentorAssignment, Alert, Scholarship, ScholarshipApplication
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import login_user, logout_user, login_required, current_user
 from datetime import datetime, date, timedelta
 from rbac_system import role_required, get_student_for_current_user, secure_redirect, admin_required
 from sqlalchemy import text, func
 import random
-from services.ml_service import ml_service
+
+try:
+    from services.ml_service import ml_service
+except Exception as exc:
+    ml_service = None
+    print(f"ML service unavailable; continuing without ML predictions: {exc}")
 
 # Create blueprint
 main_bp = Blueprint('main', __name__)
+
+@main_bp.route('/dev/init-data')
+def dev_init_data():
+    """Trigger master seeding (Dev only)"""
+    try:
+        from master_setup_system import seed_everything
+        seed_everything()
+        flash('System populated with comprehensive sample data!', 'success')
+        return redirect(url_for('main.student_dashboard'))
+    except Exception as e:
+        flash(f'Seeding failed: {str(e)}', 'danger')
+        return redirect(url_for('main.dashboard'))
 
 # Helper functions
 def admin_required(f):
@@ -24,7 +41,7 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or current_user.role != 'admin':
             flash('Admin access required', 'danger')
-            return redirect(url_for('main.login'))
+            return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -35,56 +52,17 @@ def faculty_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or current_user.role not in ['admin', 'faculty']:
             flash('Faculty access required', 'danger')
-            return redirect(url_for('main.login'))
+            return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
 
-# Authentication routes
+# Authentication routes are managed in auth_routes.py now.
 @main_bp.route('/')
 def index():
     """Home page - redirect based on auth status"""
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
-    return redirect(url_for('main.login'))
-
-@main_bp.route('/login', methods=['GET', 'POST'])
-def login():
-    """Login page"""
-    if request.method == 'POST':
-        try:
-            email = request.form.get('email')
-            password = request.form.get('password')
-            remember = bool(request.form.get('remember'))
-            
-            if not email or not password:
-                flash('Please enter email and password', 'danger')
-                return render_template('login.html')
-            
-            user = User.query.filter_by(email=email).first()
-            
-            if user and user.check_password(password):
-                login_user(user, remember=remember)
-                flash('Login successful!', 'success')
-                return redirect(url_for('main.dashboard'))
-            else:
-                flash('Invalid email or password', 'danger')
-                
-        except Exception as e:
-            flash(f'Login error: {str(e)}', 'danger')
-    
-    return render_template('login.html')
-
-@main_bp.route('/logout')
-@login_required
-def logout():
-    """Logout"""
-    try:
-        logout_user()
-        flash('You have been logged out', 'success')
-    except Exception as e:
-        flash(f'Logout error: {str(e)}', 'danger')
-    
-    return redirect(url_for('main.login'))
+    return redirect(url_for('auth.login'))
 
 # Dashboard routes
 @main_bp.route('/dashboard')
@@ -199,6 +177,25 @@ def admin_dashboard():
             # Continue with basic admin dashboard if enhanced features fail
             pass
         
+        # Compute top_scholarships and dept_distribution
+        try:
+            top_scholarships = db.session.query(
+                Scholarship.title,
+                func.count(ScholarshipApplication.id).label('application_count')
+            ).join(ScholarshipApplication).group_by(Scholarship.id).order_by(
+                func.count(ScholarshipApplication.id).desc()
+            ).limit(5).all()
+        except Exception:
+            top_scholarships = []
+        
+        try:
+            dept_distribution = db.session.query(
+                Student.department,
+                func.count(Student.id).label('student_count')
+            ).group_by(Student.department).order_by(func.count(Student.id).desc()).all()
+        except Exception:
+            dept_distribution = []
+        
         return render_template('enhanced_admin_dashboard.html',
                              total_students=total_students,
                              at_risk_students=high_risk_students,
@@ -312,106 +309,115 @@ def student_dashboard():
         avg_success_prob = 0.0
         
         try:
-            # Load counselling requests
-            result = db.session.execute(text("""
-                SELECT id, counselling_type, topic, status, request_date
-                FROM counselling_requests 
-                WHERE student_id = :student_id
-                ORDER BY request_date DESC
-            """), {"student_id": student.id})
-            
-            for row in result:
-                class CounsellingObj:
-                    def __init__(self, row):
-                        self.id = row[0]
-                        self.counselling_type = row[1]
-                        self.topic = row[2]
-                        self.description = row[2] or "No description provided"
-                        raw_request_date = row[4]
-                        if isinstance(raw_request_date, str):
-                            try:
-                                self.request_date = datetime.fromisoformat(raw_request_date)
-                            except ValueError:
-                                self.request_date = datetime.utcnow()
-                        else:
-                            self.request_date = raw_request_date or datetime.utcnow()
-                        
-                        class Status:
-                            def __init__(self, value):
-                                self.value = value
-                            def title(self):
-                                return self.value.title() if self.value else ''
-                        
-                        self.status = Status(row[3])
-                
-                counselling_requests.append(CounsellingObj(row))
-            
-            # Load scholarships data
-            result = db.session.execute(text("""
-                SELECT id, title, provider, amount, currency, application_deadline, description, min_gpa, status
-                FROM scholarships 
-                WHERE status = 'active'
-                ORDER BY amount DESC
-            """))
-            
-            for row in result:
-                eligible_scholarships.append({
-                    'id': row[0],
-                    'title': row[1],
-                    'provider': row[2] or 'Unknown',
-                    'amount': row[3],
-                    'currency': row[4] or 'USD',
-                    'deadline': row[5],
-                    'description': row[6] or 'No description available',
-                    'min_gpa': row[7],
-                    'status': row[8]
-                })
-            
-            # Load applications data
-            result = db.session.execute(text("""
-                SELECT id, scholarship_id, status, application_date, gpa_at_application, ai_eligibility_score, ai_success_probability
-                FROM scholarship_applications 
-                WHERE student_id = :student_id
-                ORDER BY application_date DESC
-            """), {"student_id": student.id})
-            
-            for row in result:
-                my_applications.append({
-                    'id': row[0],
-                    'scholarship_id': row[1],
-                    'status_value': type('Status', (), {'value': row[2]})(),
-                    'application_date': row[3],
-                    'gpa_at_application': row[4],
-                    'ai_eligibility_score': row[5],
-                    'ai_success_probability': row[6]
-                })
+            # Load counselling requests via ORM
+            from models import CounsellingRequest as CReq
+            counselling_requests = CReq.query.filter_by(
+                student_id=student.id
+            ).order_by(CReq.request_date.desc()).all()
+        except Exception as e:
+            print("Counselling loading error:", e)
+        
+        try:
+            # Load scholarships via ORM
+            eligible_scholarships = Scholarship.query.filter(
+                Scholarship.status == 'active'
+            ).order_by(Scholarship.amount.desc()).all()
+            # Fallback: try enum-based status
+            if not eligible_scholarships:
+                from models import ScholarshipStatus
+                eligible_scholarships = Scholarship.query.filter(
+                    Scholarship.status == ScholarshipStatus.ACTIVE
+                ).order_by(Scholarship.amount.desc()).all()
+        except Exception as e:
+            print("Scholarship loading error:", e)
+        
+        try:
+            # Load applications via ORM (with relationship to scholarship)
+            my_applications = ScholarshipApplication.query.filter_by(
+                student_id=student.id
+            ).order_by(ScholarshipApplication.application_date.desc()).all()
             
             # Calculate success probability
             if my_applications:
-                total_success = sum(app.get('ai_success_probability', 0) or 0 for app in my_applications)
+                total_success = sum((app.ai_success_probability or 0) for app in my_applications)
                 avg_success_prob = total_success / len(my_applications)
-            
-            # Add sample recommendations
-            if eligible_scholarships:
-                scholarship_recommendations = eligible_scholarships[:3]
-                for rec in scholarship_recommendations:
-                    rec['score'] = 85.0
-                    rec['reason'] = 'Good match for your academic profile'
-            
-            # Add sample insights
-            academic_insights = [
-                {'title': 'Strong Academic Performance', 'description': 'Your GPA is above average'},
-                {'title': 'Good Attendance', 'description': 'Keep maintaining your attendance rate'}
-            ]
-            
-            # Add career suggestions
-            career_suggestions = [
-                {'title': 'Software Developer', 'field': 'Technology'},
-                {'title': 'Data Scientist', 'field': 'Analytics'}
-            ]
-            
         except Exception as e:
-            print("Data loading error:", e)
+            print("Applications loading error:", e)
+        
+        # Build scholarship recommendations from eligible scholarships
+        if eligible_scholarships:
+            for s in eligible_scholarships[:3]:
+                scholarship_recommendations.append({
+                    'title': s.title,
+                    'amount': s.amount,
+                    'score': 85.0,
+                    'reason': f'Great match for {student.department or "your"} students with GPA {student.gpa or 0:.1f}'
+                })
+        
+        # Build academic insights with correct keys for template
+        gpa_val = student.gpa or 0
+        att_val = attendance_rate or 0
+        
+        if gpa_val >= 3.5:
+            academic_insights.append({
+                'type': 'strength', 'message': f'Excellent GPA: {gpa_val:.1f}',
+                'suggestion': 'Keep up the great work! Consider applying for merit-based scholarships.'
+            })
+        elif gpa_val >= 2.5:
+            academic_insights.append({
+                'type': 'moderate', 'message': f'Good GPA: {gpa_val:.1f}',
+                'suggestion': 'Focus on improving weaker subjects to push your GPA higher.'
+            })
+        else:
+            academic_insights.append({
+                'type': 'concern', 'message': f'GPA Needs Attention: {gpa_val:.1f}',
+                'suggestion': 'Consider tutoring services and study groups to improve grades.'
+            })
+        
+        if att_val >= 85:
+            academic_insights.append({
+                'type': 'strength', 'message': f'Strong Attendance: {att_val:.0f}%',
+                'suggestion': 'Your consistent attendance is contributing to your success.'
+            })
+        elif att_val >= 70:
+            academic_insights.append({
+                'type': 'moderate', 'message': f'Attendance: {att_val:.0f}%',
+                'suggestion': 'Try to attend all classes to improve your learning outcomes.'
+            })
+        else:
+            academic_insights.append({
+                'type': 'concern', 'message': f'Low Attendance: {att_val:.0f}%',
+                'suggestion': 'Attendance below 70% is critical. Please attend classes regularly.'
+            })
+        
+        if my_applications:
+            approved = len([a for a in my_applications if hasattr(a.status, 'value') and a.status.value == 'approved'])
+            academic_insights.append({
+                'type': 'strength' if approved > 0 else 'info',
+                'message': f'{len(my_applications)} Scholarship Applications ({approved} Approved)',
+                'suggestion': 'Keep applying to maximize your financial support opportunities.'
+            })
+        
+        # Build career suggestions with correct keys for template
+        dept = (student.department or 'General').lower()
+        if 'computer' in dept or 'cse' in dept or 'data' in dept or 'it' in dept:
+            career_suggestions = [
+                {'field': 'Software Engineering', 'reason': 'High demand for CS graduates with strong problem-solving skills', 'growth_potential': 'High'},
+                {'field': 'Data Science & AI', 'reason': 'Growing field leveraging your analytical and programming abilities', 'growth_potential': 'Very High'},
+                {'field': 'Cloud Architecture', 'reason': 'Enterprise cloud adoption is accelerating globally', 'growth_potential': 'High'},
+            ]
+        elif 'mech' in dept or 'civil' in dept or 'engineer' in dept:
+            career_suggestions = [
+                {'field': 'Design Engineering', 'reason': 'Apply engineering principles to innovative product development', 'growth_potential': 'High'},
+                {'field': 'Project Management', 'reason': 'Lead engineering projects with your technical foundation', 'growth_potential': 'High'},
+                {'field': 'Sustainable Engineering', 'reason': 'Growing focus on green technology and sustainability', 'growth_potential': 'Very High'},
+            ]
+        else:
+            career_suggestions = [
+                {'field': 'Management Consulting', 'reason': 'Leverage analytical thinking across industries', 'growth_potential': 'High'},
+                {'field': 'Research & Development', 'reason': 'Advance knowledge in your field through innovation', 'growth_potential': 'High'},
+                {'field': 'Entrepreneurship', 'reason': 'Apply your education to create impactful ventures', 'growth_potential': 'Very High'},
+            ]
         
         # Render
         return render_template(
@@ -432,7 +438,7 @@ def student_dashboard():
     except Exception as e:
         print("Dashboard error:", e)
         flash(f'Error loading dashboard: {str(e)}', 'danger')
-        return redirect(url_for('main.login'))
+        return redirect(url_for('auth.login'))
 
 # Faculty dashboard
 @main_bp.route('/faculty/dashboard')
@@ -1370,3 +1376,34 @@ def financial_assistance(student_id):
         return jsonify({'success': True, 'message': 'Financial assistance request processed'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+# Debug routes for real-time testing
+@main_bp.route('/debug/trigger-notification')
+def trigger_notification():
+    """Trigger a test notification via Socket.io"""
+    print("[DEBUG] Triggering notification...")
+    try:
+        from realtime_notifications import notification_manager
+        print("[DEBUG] Notification manager imported")
+        
+        # Send a test alert to all users
+        notification_manager.send_alert({
+            'title': 'Real-Time Test',
+            'description': 'This is a real-time notification triggered from the debug route!',
+            'severity': 'Critical'
+        })
+        print("[DEBUG] Alert sent")
+        
+        # Also send a dashboard refresh update
+        notification_manager.send_dashboard_update({
+            'type': 'stats_refresh',
+            'message': 'Dashboard stats updated in real-time'
+        })
+        print("[DEBUG] Dashboard update sent")
+        
+        return "Notification triggered! Check the student dashboard."
+    except Exception as e:
+        print(f"[DEBUG] Error in trigger_notification: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"Error: {str(e)}", 500

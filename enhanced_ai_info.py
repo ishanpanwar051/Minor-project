@@ -26,7 +26,7 @@ class StudentAIInfo:
             student_data = self._prepare_student_data(student)
             
             # AI predictions
-            ai_analysis = self.predictor.predict_student_risk(student_data)
+            ai_analysis = self.predictor.predict_risk(student_data)
             
             # Risk factors analysis
             risk_factors = self._analyze_risk_factors(student)

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apply for Scholarship - EduGuard AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .form-card { background: rgba(255,255,255,0.95); border-radius: 15px; padding: 30px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .info-card { background: rgba(255,255,255,0.95); border-radius: 15px; padding: 25px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+        .btn { border-radius: 25px; font-weight: 600; }
+        .form-control, .form-select { border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('main.student_dashboard') }}"><i class="fas fa-graduation-cap"></i> EduGuard AI</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('scholarship.scholarship_portal') }}"><i class="fas fa-arrow-left"></i> Back to Scholarships</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <!-- Scholarship Info -->
+            <div class="col-md-4">
+                <div class="info-card">
+                    <h5 class="mb-3"><i class="fas fa-award text-warning"></i> Scholarship Details</h5>
+                    <h4>{{ scholarship.title }}</h4>
+                    <p class="text-muted">{{ scholarship.description or '' }}</p>
+                    <hr>
+                    <div class="mb-2"><strong>Amount:</strong> <span class="text-success">${{ "%.0f"|format(scholarship.amount) }}</span></div>
+                    <div class="mb-2"><strong>Provider:</strong> {{ scholarship.provider or 'Unknown' }}</div>
+                    <div class="mb-2"><strong>Min GPA:</strong> {{ scholarship.min_gpa or 'N/A' }}</div>
+                    <div class="mb-2"><strong>Deadline:</strong> {{ scholarship.application_deadline.strftime('%b %d, %Y') if scholarship.application_deadline else 'N/A' }}</div>
+                    <hr>
+                    <h6>Your Profile</h6>
+                    <div class="mb-1"><strong>GPA:</strong> {{ "%.1f"|format(student.gpa or 0) }}</div>
+                    <div class="mb-1"><strong>Department:</strong> {{ student.department or 'N/A' }}</div>
+                    <div class="mb-1"><strong>Year:</strong> {{ student.year or 'N/A' }}</div>
+                </div>
+            </div>
+
+            <!-- Application Form -->
+            <div class="col-md-8">
+                <div class="form-card">
+                    <h4 class="mb-4"><i class="fas fa-paper-plane text-primary"></i> Submit Application</h4>
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+                        {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Personal Statement</label>
+                            <textarea name="personal_statement" class="form-control" rows="5" 
+                                placeholder="Tell us about yourself, your academic goals, and why you deserve this scholarship..." required></textarea>
+                            <small class="text-muted">Minimum 100 characters. Be specific about your achievements and goals.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Financial Justification</label>
+                            <textarea name="financial_justification" class="form-control" rows="3" 
+                                placeholder="Explain your financial situation and how this scholarship will help..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Additional Documents</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="documents" value="transcript" id="doc1">
+                                <label class="form-check-label" for="doc1">Academic Transcript</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="documents" value="recommendation" id="doc2">
+                                <label class="form-check-label" for="doc2">Letter of Recommendation</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="documents" value="resume" id="doc3">
+                                <label class="form-check-label" for="doc3">Resume/CV</label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane"></i> Submit Application
+                            </button>
+                            <a href="{{ url_for('scholarship.scholarship_portal') }}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
