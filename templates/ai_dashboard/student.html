@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>AI Student Dashboard</h2>
+    <div class="alert alert-info">Your AI insights have been integrated directly into your main dashboard.</div>
+    <a href="{{ url_for('main.student_dashboard') }}" class="btn btn-primary">Go to Main Dashboard</a>
+</div>
+{% endblock %}

@@ -3,7 +3,7 @@ AI Assistant Routes
 Intelligent chat-based assistant for students
 """
 
-from flask import Blueprint, render_template, request, jsonify, session
+from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for
 from flask_login import login_required, current_user
 from models_enhanced import db, AIInteraction, Student, Scholarship, ScholarshipApplication
 from datetime import datetime

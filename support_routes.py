@@ -15,7 +15,7 @@ def dashboard():
     # STRICT: Only students can access this route
     if current_user.role != 'student':
         flash('Access denied. This area is for students only.', 'danger')
-        return redirect(url_for('main.login'))  # Send back to login, not dashboard
+        return redirect(url_for('auth.login'))  # Send back to login, not dashboard
     
     # Find student by user_id first
     student = Student.query.filter_by(user_id=current_user.id).first()
@@ -24,12 +24,12 @@ def dashboard():
         student = Student.query.filter_by(email=current_user.email).first()
         if not student:
             flash('Student profile not found. Please contact administrator.', 'danger')
-            return redirect(url_for('main.login'))
+            return redirect(url_for('auth.login'))
     
     # Additional security: Verify this student belongs to current user
     if student.user_id != current_user.id:
         flash('Access denied. Invalid student assignment.', 'danger')
-        return redirect(url_for('main.login'))
+        return redirect(url_for('auth.login'))
     
     # Get motivational quote based on date
     quotes = [
@@ -76,13 +76,21 @@ def dashboard():
         log_date=date.today()
     ).first()
     
+    try:
+        ai_info = student_ai_info.get_student_comprehensive_info(student.id)
+    except Exception as exc:
+        print(f"Support AI info unavailable: {exc}")
+        ai_info = {}
+
     return render_template('support_dashboard.html',
                          student=student,
                          todays_quote=todays_quote,
                          active_goals=active_goals,
                          mood_data=mood_data,
                          todays_mood=todays_mood,
-                         ai_info=student_ai_info.get_student_comprehensive_info(student.id))
+                         date=date,
+                         timedelta=timedelta,
+                         ai_info=ai_info)
 
 @support_bp.route('/goals')
 @login_required
@@ -91,17 +99,17 @@ def goals():
     # STRICT: Only students can access this route
     if current_user.role != 'student':
         flash('Access denied. This area is for students only.', 'danger')
-        return redirect(url_for('main.login'))
+        return redirect(url_for('auth.login'))
     
     student = Student.query.filter_by(user_id=current_user.id).first()
     if not student:
         flash('Student profile not found. Please contact administrator.', 'danger')
-        return redirect(url_for('main.login'))
+        return redirect(url_for('auth.login'))
     
     # Security check
     if student.user_id != current_user.id:
         flash('Access denied. Invalid student assignment.', 'danger')
-        return redirect(url_for('main.login'))
+        return redirect(url_for('auth.login'))
     
     # Get all goals with different statuses
     active_goals = StudentGoal.query.filter_by(student_id=student.id, status='Active').order_by(StudentGoal.created_at.desc()).all()

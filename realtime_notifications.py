@@ -3,6 +3,7 @@ Real-time Notification System for EduGuard
 Provides WebSocket-based real-time alerts and updates
 """
 
+from flask import request
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_login import current_user
 import json
@@ -42,7 +43,11 @@ class NotificationManager:
             'type': 'alert',
             'data': alert_data,
             'timestamp': datetime.utcnow().isoformat(),
-            'id': len(self.notification_queue) + 1
+            'id': len(self.notification_queue) + 1,
+            'title': alert_data.get('title', 'Notification'),
+            'description': alert_data.get('description', alert_data.get('message', '')),
+            'severity': alert_data.get('severity', 'Info'),
+            'alert_type': alert_data.get('alert_type', 'General')
         }
         
         if target_user:
@@ -54,8 +59,8 @@ class NotificationManager:
                 if user_info.get('role') == target_role:
                     socketio.emit('notification', notification, room=f"user_{user_id}")
         else:
-            # Send to all active users
-            socketio.emit('notification', notification, broadcast=True)
+            # Send to all active users (broadcast by default if no room specified)
+            socketio.emit('notification', notification)
         
         self.notification_queue.append(notification)
         logger.info(f"Alert sent: {alert_data.get('title', 'Unknown')}")
@@ -68,7 +73,7 @@ class NotificationManager:
             'timestamp': datetime.utcnow().isoformat()
         }
         
-        socketio.emit('dashboard_update', update, broadcast=True)
+        socketio.emit('dashboard_update', update)
         logger.info("Dashboard update sent to all users")
     
     def send_risk_level_change(self, student_data, old_level, new_level):
@@ -190,7 +195,7 @@ def handle_request_alerts():
     """Handle request for recent alerts"""
     if current_user.is_authenticated:
         try:
-            from models import Alert, db
+            from models import Alert, Student
             
             # Get recent alerts based on user role
             if current_user.role in ['admin', 'faculty']:

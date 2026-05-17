@@ -137,13 +137,48 @@ def is_faculty():
 def get_student_for_current_user():
     """
     Get student record for current logged-in student
-    Returns None if user is not a student or student not found
+    If student profile is missing, automatically creates one to prevent 404s.
+    Returns None if user is not a student.
     """
     if not is_student():
         return None
     
-    from models import Student
-    return Student.query.filter_by(user_id=current_user.id).first()
+    from models import Student, db, RiskProfile
+    student = Student.query.filter_by(user_id=current_user.id).first()
+    
+    if not student:
+        try:
+            student = Student(
+                user_id=current_user.id,
+                student_id=f"STU{current_user.id}",
+                first_name=current_user.username if hasattr(current_user, 'username') else current_user.email.split('@')[0],
+                last_name="Student",
+                email=current_user.email,
+                gpa=7.0,
+                department="General",
+                year=1,
+                semester=1
+            )
+            db.session.add(student)
+            db.session.commit()
+            
+            # Create a default risk profile
+            risk_profile = RiskProfile(
+                student_id=student.id,
+                attendance_rate=75.0,
+                academic_performance=70.0
+            )
+            risk_profile.update_risk_score(use_ml=False)
+            db.session.add(risk_profile)
+            db.session.commit()
+            
+            print(f"Auto-created missing profile for student {current_user.email}")
+        except Exception as e:
+            print(f"Failed to auto-create student profile: {e}")
+            db.session.rollback()
+            return None
+            
+    return student
 
 def validate_student_access(student_id):
     """

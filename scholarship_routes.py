@@ -309,7 +309,7 @@ def api_scholarships():
                 'deadline': scholarship.application_deadline.isoformat() if scholarship.application_deadline else None,
                 'description': scholarship.description[:200] + '...' if scholarship.description and len(scholarship.description) > 200 else (scholarship.description or 'No description available'),
                 'min_gpa': scholarship.min_gpa,
-                'status': scholarship.status
+                'status': scholarship.status.value if hasattr(scholarship.status, 'value') else scholarship.status
             }
             data.append(scholarship_data)
         
@@ -354,7 +354,7 @@ def api_my_applications():
                 'id': app.id,
                 'scholarship_id': app.scholarship_id,
                 'scholarship_title': scholarship.title if scholarship else 'Unknown',
-                'status': app.status,
+                'status': app.status.value if hasattr(app.status, 'value') else app.status,
                 'application_date': app.application_date.isoformat() if app.application_date else None,
                 'gpa_at_application': app.gpa_at_application,
                 'ai_eligibility_score': app.ai_eligibility_score,

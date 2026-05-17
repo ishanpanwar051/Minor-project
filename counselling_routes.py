@@ -7,6 +7,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from models_enhanced import db, CounsellingRequest, Student, User, CounsellingStatus
 from datetime import datetime, timedelta
+from sqlalchemy import func
 from rbac_system import admin_required, student_required, get_student_for_current_user
 import json
 
