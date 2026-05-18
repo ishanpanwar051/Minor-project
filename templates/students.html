@@ -11,27 +11,48 @@
 </div>
 
 <!-- Search and Filter -->
-<div class="row mb-4">
-    <div class="col-md-6">
-        <input type="text" class="form-control" placeholder="Search students...">
+<form method="GET" action="{{ url_for('main.students') }}" class="mb-4">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="fas fa-search text-muted"></i>
+                </span>
+                <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Search students by name, ID, or email..." value="{{ search or '' }}">
+                <button class="btn btn-primary" type="submit">Search</button>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="fas fa-filter text-muted"></i>
+                </span>
+                <select name="department" class="form-select border-start-0 ps-0" onchange="this.form.submit()">
+                    <option value="">All Departments</option>
+                    <option value="Computer Science" {% if department == 'Computer Science' %}selected{% endif %}>Computer Science</option>
+                    <option value="Engineering" {% if department == 'Engineering' %}selected{% endif %}>Engineering</option>
+                    <option value="Business" {% if department == 'Business' %}selected{% endif %}>Business</option>
+                    <option value="Arts" {% if department == 'Arts' %}selected{% endif %}>Arts</option>
+                    <option value="Science" {% if department == 'Science' %}selected{% endif %}>Science</option>
+                </select>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="fas fa-exclamation-triangle text-muted"></i>
+                </span>
+                <select name="risk" class="form-select border-start-0 ps-0" onchange="this.form.submit()">
+                    <option value="">All Risk Levels</option>
+                    <option value="Low" {% if risk == 'Low' %}selected{% endif %}>Low Risk</option>
+                    <option value="Medium" {% if risk == 'Medium' %}selected{% endif %}>Medium Risk</option>
+                    <option value="High" {% if risk == 'High' %}selected{% endif %}>High Risk</option>
+                    <option value="Critical" {% if risk == 'Critical' %}selected{% endif %}>Critical Risk</option>
+                </select>
+            </div>
+        </div>
     </div>
-    <div class="col-md-3">
-        <select class="form-select">
-            <option>All Departments</option>
-            <option>Computer Science</option>
-            <option>Engineering</option>
-            <option>Business</option>
-        </select>
-    </div>
-    <div class="col-md-3">
-        <select class="form-select">
-            <option>All Risk Levels</option>
-            <option>Low Risk</option>
-            <option>Medium Risk</option>
-            <option>High Risk</option>
-        </select>
-    </div>
-</div>
+</form>
 
 <!-- Students Table -->
 <div class="card">

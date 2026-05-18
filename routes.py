@@ -292,7 +292,7 @@ def student_dashboard():
         attendance_records = Attendance.query.filter(
             Attendance.student_id == student.id,
             Attendance.date >= date.today() - timedelta(days=30)
-        ).all()
+        ).order_by(Attendance.date.desc()).all()
         
         attendance_rate = 0
         if attendance_records:
@@ -337,12 +337,27 @@ def student_dashboard():
                 student_id=student.id
             ).order_by(ScholarshipApplication.application_date.desc()).all()
             
-            # Calculate success probability
+            # Calculate success probability from applications and current profile.
+            # Stored demo probabilities can be old, so we also calculate a live profile score.
             if my_applications:
                 total_success = sum((app.ai_success_probability or 0) for app in my_applications)
                 avg_success_prob = total_success / len(my_applications)
         except Exception as e:
             print("Applications loading error:", e)
+
+        # Live success score: GPA + attendance + risk profile + application history.
+        gpa_component = min((student.gpa or 0) / 10, 1.0) * 0.40
+        attendance_component = min((attendance_rate or 0) / 100, 1.0) * 0.30
+        risk_penalty = {
+            'Critical': 0.25,
+            'High': 0.15,
+            'Medium': 0.07,
+            'Low': 0.0
+        }.get(risk_profile.risk_level if risk_profile else 'Low', 0.0)
+        application_bonus = min(len(my_applications), 3) * 0.03
+        profile_success_prob = 0.25 + gpa_component + attendance_component + application_bonus - risk_penalty
+        profile_success_prob = max(0.20, min(profile_success_prob, 0.95))
+        avg_success_prob = max(avg_success_prob, profile_success_prob)
         
         # Build scholarship recommendations from eligible scholarships
         if eligible_scholarships:
@@ -425,7 +440,7 @@ def student_dashboard():
             student=student,
             risk_profile=risk_profile,
             attendance_rate=round(attendance_rate, 1),
-            recent_attendance=attendance_records[-10:],
+            recent_attendance=attendance_records[:30],
             requests=counselling_requests,
             eligible_scholarships=eligible_scholarships,
             scholarship_recommendations=scholarship_recommendations,
@@ -664,8 +679,8 @@ def ai_dashboard():
 @login_required
 @admin_required
 def admin_panel():
-    """Admin Panel"""
-    return render_template('admin.html')
+    """Redirect legacy Admin Panel to enhanced dashboard"""
+    return redirect(url_for('main.admin_dashboard'))
 
 def get_ml_insights():
     """Get ML model insights for dashboard"""
@@ -780,13 +795,16 @@ def add_student():
 @login_required
 @faculty_required
 def students():
-    """Students list page"""
+    """Students list page with search and filtering"""
     try:
         page = request.args.get('page', 1, type=int)
         search = request.args.get('search', '')
+        department = request.args.get('department', '')
+        risk = request.args.get('risk', '')
         
         query = Student.query
         
+        # Apply search filter
         if search:
             query = query.filter(
                 Student.first_name.contains(search) |
@@ -794,16 +812,30 @@ def students():
                 Student.student_id.contains(search) |
                 Student.email.contains(search)
             )
+            
+        # Apply department filter
+        if department:
+            query = query.filter(Student.department == department)
+            
+        # Apply risk filter (join RiskProfile table)
+        if risk:
+            query = query.join(RiskProfile).filter(RiskProfile.risk_level == risk)
         
         students = query.paginate(
             page=page, per_page=20, error_out=False
         )
         
-        return render_template('students.html', students=students, search=search)
+        return render_template(
+            'students.html', 
+            students=students, 
+            search=search, 
+            department=department, 
+            risk=risk
+        )
         
     except Exception as e:
         flash(f'Students error: {str(e)}', 'danger')
-        return render_template('students.html', students=None, search='')
+        return render_template('students.html', students=None, search='', department='', risk='')
 
 @main_bp.route('/student/<int:student_id>')
 @login_required
@@ -913,24 +945,8 @@ def risk():
 @login_required
 @admin_required
 def admin():
-    """Admin panel"""
-    try:
-        # Get system statistics
-        stats = {
-            'total_users': User.query.count(),
-            'total_students': Student.query.count(),
-            'active_alerts': Alert.query.filter_by(status='Active').count(),
-            'pending_counselling': Counselling.query.filter_by(status='Scheduled').count()
-        }
-        
-        # Get recent users
-        recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
-        
-        return render_template('admin.html', stats=stats, recent_users=recent_users)
-        
-    except Exception as e:
-        flash(f'Admin panel error: {str(e)}', 'danger')
-        return render_template('admin.html', stats={}, recent_users=[])
+    """Redirect legacy admin endpoint to enhanced dashboard"""
+    return redirect(url_for('main.admin_dashboard'))
 
 # API routes for AJAX
 @main_bp.route('/api/update_risk/<int:student_id>')
@@ -1205,24 +1221,87 @@ def community():
         ngos = [
             {
                 'name': 'Pratham Education Foundation',
-                'focus': 'Quality education for underprivileged children',
-                'contact': 'contact@pratham.org',
+                'focus': 'Foundational learning, remedial classes, and community education support',
+                'contact': 'contact@pratham.org | +91-22-6518-0000',
                 'website': 'https://www.pratham.org',
-                'programs': ['Learning Enhancement', 'Teacher Training', 'Community Learning']
+                'programs': ['Learning Enhancement', 'Bridge Courses', 'Community Learning']
             },
             {
                 'name': 'Teach For India',
-                'focus': 'Educational equity through fellowship program',
-                'contact': 'info@teachforindia.org',
+                'focus': 'Mentorship, classroom support, and career exposure for underserved students',
+                'contact': 'info@teachforindia.org | +91-80-4710-1234',
                 'website': 'https://www.teachforindia.org',
-                'programs': ['Fellowship Program', 'Student Support', 'Career Guidance']
+                'programs': ['Mentorship', 'Student Support', 'Career Guidance']
             },
             {
                 'name': 'Akanksha Foundation',
-                'focus': 'Education for children from low-income communities',
-                'contact': 'info@akanksha.org',
+                'focus': 'After-school support, counselling, and life-skills development',
+                'contact': 'info@akanksha.org | +91-22-2370-0200',
                 'website': 'https://www.akanksha.org',
                 'programs': ['After-school Programs', 'Career Counseling', 'Mentorship']
+            },
+            {
+                'name': 'Smile Foundation',
+                'focus': 'Education, healthcare, and scholarship support for low-income families',
+                'contact': 'info@smilefoundationindia.org | +91-11-4312-3700',
+                'website': 'https://www.smilefoundationindia.org',
+                'programs': ['Scholarship Help', 'Healthcare Support', 'Digital Learning']
+            },
+            {
+                'name': 'Magic Bus India Foundation',
+                'focus': 'Life skills, employability, and school-to-work transition support',
+                'contact': 'info@magicbusindia.org | +91-22-6243-4800',
+                'website': 'https://www.magicbus.org',
+                'programs': ['Life Skills', 'Employability Training', 'Mentor Connect']
+            },
+            {
+                'name': 'CRY India',
+                'focus': 'Child rights, education continuity, and family support interventions',
+                'contact': 'support@crymail.org | +91-22-2309-6363',
+                'website': 'https://www.cry.org',
+                'programs': ['Education Continuity', 'Family Outreach', 'Emergency Support']
+            },
+            {
+                'name': 'Room to Read India',
+                'focus': 'Literacy, girls education, and reading habit programs',
+                'contact': 'india@roomtoread.org | +91-11-4666-4000',
+                'website': 'https://www.roomtoread.org',
+                'programs': ['Girls Education', 'Reading Rooms', 'Academic Mentoring']
+            },
+            {
+                'name': 'Bhumi',
+                'focus': 'Volunteer-driven teaching, mentorship, and career-readiness programs',
+                'contact': 'volunteer@bhumi.ngo | +91-44-4300-9445',
+                'website': 'https://www.bhumi.ngo',
+                'programs': ['Volunteer Tutoring', 'Career Readiness', 'Counselling Camps']
+            },
+            {
+                'name': 'Goonj',
+                'focus': 'Material support, books, uniforms, and emergency family assistance',
+                'contact': 'mail@goonj.org | +91-11-4140-1216',
+                'website': 'https://goonj.org',
+                'programs': ['Books and Kits', 'Emergency Aid', 'Community Drives']
+            },
+            {
+                'name': 'U&I Trust',
+                'focus': 'Academic mentoring, emotional support, and student volunteer programs',
+                'contact': 'contact@uandi.org.in | +91-80-4113-0101',
+                'website': 'https://www.uandi.org.in',
+                'programs': ['Academic Mentoring', 'Mental Wellness', 'Peer Volunteers']
+            },
+            {
+                'name': 'Aarohan Foundation',
+                'focus': 'Counselling, remedial education, and family outreach for at-risk students',
+                'contact': 'support@aarohanfoundation.org | +91-11-4050-8844',
+                'website': 'https://aarohanfoundation.org',
+                'programs': ['Remedial Classes', 'Family Counselling', 'Dropout Prevention']
+            },
+            {
+                'name': 'Vidya Foundation',
+                'focus': 'Scholarships, digital literacy, and career support for college students',
+                'contact': 'info@vidya-india.org | +91-22-2570-0036',
+                'website': 'https://www.vidya-india.org',
+                'programs': ['Scholarships', 'Digital Literacy', 'Career Support']
             }
         ]
         
