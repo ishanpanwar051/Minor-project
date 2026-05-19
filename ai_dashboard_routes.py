@@ -3,9 +3,12 @@ AI Dashboard Routes
 Comprehensive analytics, insights, and predictive analytics
 """
 
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, url_for
 from flask_login import login_required, current_user
-from models_enhanced import db, Scholarship, ScholarshipApplication, Student, User, AnalyticsData, ApplicationStatus, ScholarshipStatus
+from models_enhanced import (
+    db, Scholarship, ScholarshipApplication, Student, User, AnalyticsData,
+    ApplicationStatus, ScholarshipStatus, RiskProfile
+)
 from datetime import datetime, timedelta, date
 from sqlalchemy import func, and_, or_
 import json
@@ -239,6 +242,76 @@ def api_student_recommendations(student_id):
     recommendations = get_personalized_recommendations(student)
     
     return jsonify(recommendations)
+
+@ai_dashboard_bp.route('/api/predictions')
+@login_required
+@admin_required
+def api_predictions():
+    """Database-backed admin prediction feed for the dashboard."""
+    try:
+        success_predictions = predict_success_rates()
+    except Exception:
+        success_predictions = []
+
+    try:
+        scholarship_recommendations = generate_scholarship_recommendations()
+    except Exception:
+        scholarship_recommendations = []
+
+    at_risk_students = []
+    risky_rows = Student.query.join(RiskProfile).filter(
+        RiskProfile.risk_level.in_(['High', 'Critical'])
+    ).order_by(
+        db.case(
+            (RiskProfile.risk_level == 'Critical', 0),
+            (RiskProfile.risk_level == 'High', 1),
+            else_=2
+        ),
+        RiskProfile.risk_score.desc()
+    ).limit(10).all()
+
+    if not risky_rows:
+        risky_rows = Student.query.join(RiskProfile).order_by(
+            RiskProfile.risk_score.desc()
+        ).limit(5).all()
+
+    for student in risky_rows:
+        risk_profile = student.risk_profile
+        reasons = []
+        if risk_profile and risk_profile.risk_reasons:
+            reasons = [
+                reason.strip()
+                for reason in risk_profile.risk_reasons.split(',')
+                if reason.strip()
+            ]
+
+        at_risk_students.append({
+            'student': {
+                'id': student.id,
+                'student_id': student.student_id,
+                'first_name': student.first_name,
+                'last_name': student.last_name,
+                'department': student.department,
+                'email': student.email,
+                'gpa': student.gpa,
+                'attendance_rate': risk_profile.attendance_rate if risk_profile else 0
+            },
+            'risk_score': risk_profile.risk_score if risk_profile else 0,
+            'risk_level': risk_profile.risk_level if risk_profile else 'Not calculated',
+            'risk_factors': reasons or ['No risk reasons recorded'],
+            'profile_url': url_for('main.student_detail', student_id=student.id),
+            'update_url': url_for(
+                'main.update_risk',
+                student_id=student.id,
+                next=url_for('main.admin_dashboard')
+            )
+        })
+
+    return jsonify({
+        'success_predictions': success_predictions,
+        'at_risk_students': at_risk_students,
+        'scholarship_recommendations': scholarship_recommendations
+    })
 
 @ai_dashboard_bp.route('/api/student-insights')
 @login_required

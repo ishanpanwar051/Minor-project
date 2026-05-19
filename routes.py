@@ -4,8 +4,12 @@ Clean, consolidated routing
 """
 
 from app import create_app
-from models import User, Student, Attendance, db, RiskProfile, Counselling, MentorAssignment, Alert, Scholarship, ScholarshipApplication
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
+from models import (
+    User, Student, Attendance, db, RiskProfile, Counselling, MentorAssignment,
+    Alert, Scholarship, ScholarshipApplication, ScholarshipStatus,
+    ApplicationStatus
+)
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, make_response
 from flask_login import login_user, logout_user, login_required, current_user
 from datetime import datetime, date, timedelta
 from rbac_system import role_required, get_student_for_current_user, secure_redirect, admin_required
@@ -181,7 +185,11 @@ def admin_dashboard():
         try:
             top_scholarships = db.session.query(
                 Scholarship.title,
-                func.count(ScholarshipApplication.id).label('application_count')
+                func.count(ScholarshipApplication.id).label('application_count'),
+                func.coalesce(
+                    func.avg(ScholarshipApplication.ai_success_probability),
+                    0
+                ).label('avg_success_prob')
             ).join(ScholarshipApplication).group_by(Scholarship.id).order_by(
                 func.count(ScholarshipApplication.id).desc()
             ).limit(5).all()
@@ -196,6 +204,27 @@ def admin_dashboard():
         except Exception:
             dept_distribution = []
         
+        total_applications = ScholarshipApplication.query.count()
+        approved_applications = ScholarshipApplication.query.filter_by(
+            status=ApplicationStatus.APPROVED
+        ).count()
+        rejected_applications = ScholarshipApplication.query.filter_by(
+            status=ApplicationStatus.REJECTED
+        ).count()
+        under_review_applications = ScholarshipApplication.query.filter_by(
+            status=ApplicationStatus.UNDER_REVIEW
+        ).count()
+        pending_applications = ScholarshipApplication.query.filter_by(
+            status=ApplicationStatus.PENDING
+        ).count()
+        active_scholarships = Scholarship.query.filter_by(
+            status=ScholarshipStatus.ACTIVE
+        ).count()
+        recent_applications = ScholarshipApplication.query.filter(
+            ScholarshipApplication.application_date >= datetime.utcnow() - timedelta(days=30)
+        ).count()
+        success_rate = (approved_applications / max(total_applications, 1)) * 100
+
         return render_template('enhanced_admin_dashboard.html',
                              total_students=total_students,
                              at_risk_students=high_risk_students,
@@ -206,13 +235,14 @@ def admin_dashboard():
                              risky_students=risky_students,
                              # Enhanced data
                              total_scholarships=Scholarship.query.count(),
-                             active_scholarships=Scholarship.query.filter_by(status='active').count(),
-                             total_applications=ScholarshipApplication.query.count(),
-                             pending_applications=ScholarshipApplication.query.filter_by(status='pending').count(),
-                             recent_applications=ScholarshipApplication.query.filter(
-                                 ScholarshipApplication.application_date >= datetime.utcnow() - timedelta(days=30)
-                             ).count(),
-                             success_rate=(ScholarshipApplication.query.filter_by(status='approved').count() / max(ScholarshipApplication.query.count(), 1)) * 100,
+                             active_scholarships=active_scholarships,
+                             total_applications=total_applications,
+                             pending_applications=pending_applications,
+                             approved_applications=approved_applications,
+                             rejected_applications=rejected_applications,
+                             under_review_applications=under_review_applications,
+                             recent_applications=recent_applications,
+                             success_rate=success_rate,
                              top_scholarships=top_scholarships,
                              dept_distribution=dept_distribution,
                              counselling_requests=counselling_requests)
@@ -800,7 +830,7 @@ def students():
         page = request.args.get('page', 1, type=int)
         search = request.args.get('search', '')
         department = request.args.get('department', '')
-        risk = request.args.get('risk', '')
+        risk_level = request.args.get('risk_level', '')
         
         query = Student.query
         
@@ -812,30 +842,37 @@ def students():
                 Student.student_id.contains(search) |
                 Student.email.contains(search)
             )
-            
-        # Apply department filter
+
         if department:
             query = query.filter(Student.department == department)
-            
-        # Apply risk filter (join RiskProfile table)
-        if risk:
-            query = query.join(RiskProfile).filter(RiskProfile.risk_level == risk)
+
+        if risk_level:
+            query = query.join(RiskProfile).filter(RiskProfile.risk_level == risk_level)
         
         students = query.paginate(
             page=page, per_page=20, error_out=False
         )
+
+        departments = [
+            row[0] for row in db.session.query(Student.department)
+            .filter(Student.department.isnot(None))
+            .distinct()
+            .order_by(Student.department)
+            .all()
+        ]
         
         return render_template(
-            'students.html', 
-            students=students, 
-            search=search, 
-            department=department, 
-            risk=risk
+            'students.html',
+            students=students,
+            search=search,
+            departments=departments,
+            selected_department=department,
+            selected_risk_level=risk_level
         )
         
     except Exception as e:
         flash(f'Students error: {str(e)}', 'danger')
-        return render_template('students.html', students=None, search='', department='', risk='')
+        return render_template('students.html', students=None, search='', departments=[])
 
 @main_bp.route('/student/<int:student_id>')
 @login_required
@@ -862,6 +899,18 @@ def student_detail(student_id):
         
         # Get alerts
         alerts = Alert.query.filter_by(student_id=student_id).order_by(Alert.created_at.desc()).limit(5).all()
+
+        applications = ScholarshipApplication.query.filter_by(
+            student_id=student_id
+        ).order_by(ScholarshipApplication.application_date.desc()).limit(10).all()
+
+        try:
+            from models import CounsellingRequest
+            counselling_requests = CounsellingRequest.query.filter_by(
+                student_id=student_id
+            ).order_by(CounsellingRequest.request_date.desc()).limit(5).all()
+        except Exception:
+            counselling_requests = []
         
         return render_template('student_detail.html',
                              student=student,
@@ -869,6 +918,8 @@ def student_detail(student_id):
                              attendance_rate=round(attendance_rate, 1),
                              risk_profile=risk_profile,
                              counselling_sessions=counselling_sessions,
+                             counselling_requests=counselling_requests,
+                             applications=applications,
                              alerts=alerts)
         
     except Exception as e:
@@ -948,6 +999,41 @@ def admin():
     """Redirect legacy admin endpoint to enhanced dashboard"""
     return redirect(url_for('main.admin_dashboard'))
 
+@main_bp.route('/admin/export-report')
+@login_required
+@admin_required
+def export_admin_report():
+    """Download a simple CSV report for students and risk status."""
+    import csv
+    from io import StringIO
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        'Student ID', 'Name', 'Email', 'Department', 'GPA',
+        'Attendance Rate', 'Risk Score', 'Risk Level', 'Risk Reasons'
+    ])
+
+    students = Student.query.outerjoin(RiskProfile).order_by(Student.student_id).all()
+    for student in students:
+        risk_profile = student.risk_profile
+        writer.writerow([
+            student.student_id,
+            f'{student.first_name} {student.last_name}',
+            student.email,
+            student.department or '',
+            student.gpa or '',
+            round(risk_profile.attendance_rate or 0, 1) if risk_profile else '',
+            round(risk_profile.risk_score or 0, 1) if risk_profile else '',
+            risk_profile.risk_level if risk_profile else 'Not calculated',
+            risk_profile.risk_reasons if risk_profile else ''
+        ])
+
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'text/csv'
+    response.headers['Content-Disposition'] = 'attachment; filename=eduguard_admin_report.csv'
+    return response
+
 # API routes for AJAX
 @main_bp.route('/api/update_risk/<int:student_id>')
 @login_required
@@ -1002,6 +1088,11 @@ def update_risk(student_id):
                 db.session.add(new_alert)
         
         db.session.commit()
+
+        redirect_target = request.args.get('next')
+        if redirect_target:
+            flash(f'Risk updated for {student.first_name} {student.last_name}: {risk_profile.risk_level}', 'success')
+            return redirect(redirect_target)
         
         return jsonify({
             'success': True,
@@ -1036,6 +1127,13 @@ def auto_update_risk_all():
             elif rp.risk_level == 'Critical':
                 summary['critical'] += 1
         db.session.commit()
+        redirect_target = request.args.get('next')
+        if redirect_target:
+            flash(
+                f'Risk updated for {summary["updated"]} students. High/Critical: {summary["high"] + summary["critical"]}',
+                'success'
+            )
+            return redirect(redirect_target)
         return jsonify({'success': True, 'summary': summary})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})

@@ -1,8 +1,178 @@
 {% extends "base.html" %}
+
+{% block title %}{{ student.first_name }} {{ student.last_name }} - Student Profile{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <h2>Student Details</h2>
-    <p>Student details view is under construction.</p>
-    <a href="{{ url_for('main.admin_dashboard') }}" class="btn btn-secondary">Back</a>
+{% set level = risk_profile.risk_level if risk_profile else 'Not calculated' %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1"><i class="fas fa-user-graduate"></i> {{ student.first_name }} {{ student.last_name }}</h1>
+        <div class="text-muted">{{ student.student_id }} | {{ student.department or 'N/A' }} | Year {{ student.year or 'N/A' }}, Semester {{ student.semester or 'N/A' }}</div>
+    </div>
+    <div class="btn-group">
+        <a href="{{ url_for('main.students') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Students</a>
+        <a href="{{ url_for('main.update_risk', student_id=student.id, next=url_for('main.student_detail', student_id=student.id)) }}" class="btn btn-warning"><i class="fas fa-sync"></i> Update Risk</a>
+        <a href="{{ url_for('main.risk') }}" class="btn btn-outline-danger"><i class="fas fa-exclamation-triangle"></i> Risk List</a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-graduation-cap fa-2x text-primary mb-2"></i>
+                <h4>{{ "%.1f"|format(student.gpa or 0) }}</h4>
+                <p class="text-muted mb-0">GPA</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-calendar-check fa-2x text-success mb-2"></i>
+                <h4>{{ "%.1f"|format(attendance_rate or (risk_profile.attendance_rate if risk_profile else 0)) }}%</h4>
+                <p class="text-muted mb-0">Recent Attendance</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-bolt fa-2x text-warning mb-2"></i>
+                <h4>{{ "%.1f"|format(risk_profile.risk_score if risk_profile else 0) }}</h4>
+                <p class="text-muted mb-0">Risk Score</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-shield-alt fa-2x text-danger mb-2"></i>
+                <h4>
+                    <span class="badge {% if level == 'Critical' %}bg-dark{% elif level == 'High' %}bg-danger{% elif level == 'Medium' %}bg-warning{% elif level == 'Low' %}bg-success{% else %}bg-secondary{% endif %}">
+                        {{ level }}
+                    </span>
+                </h4>
+                <p class="text-muted mb-0">Risk Level</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0"><i class="fas fa-id-card"></i> Student Info</h5></div>
+            <div class="card-body">
+                <p><strong>Email:</strong><br>{{ student.email }}</p>
+                <p><strong>Phone:</strong><br>{{ student.phone or 'N/A' }}</p>
+                <p><strong>Parent:</strong><br>{{ student.parent_name or 'N/A' }}</p>
+                <p><strong>Parent Email:</strong><br>{{ student.parent_email or 'N/A' }}</p>
+                <p><strong>Parent Phone:</strong><br>{{ student.parent_phone or 'N/A' }}</p>
+                <p><strong>Credits Completed:</strong><br>{{ student.credits_completed or 0 }}</p>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0"><i class="fas fa-exclamation-circle"></i> Risk Reasons</h5></div>
+            <div class="card-body">
+                {% if risk_profile %}
+                <p>{{ risk_profile.risk_reasons or 'No significant risk factors detected' }}</p>
+                <div class="small text-muted">Last updated: {{ risk_profile.last_updated.strftime('%d %b %Y, %I:%M %p') if risk_profile.last_updated else 'N/A' }}</div>
+                {% else %}
+                <p class="text-muted">Risk profile not calculated yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0"><i class="fas fa-calendar-check"></i> Recent Attendance</h5></div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Course</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in attendance_records %}
+                            <tr>
+                                <td>{{ record.date.strftime('%d %b %Y') if record.date else 'N/A' }}</td>
+                                <td>{{ record.course or 'General' }}</td>
+                                <td>
+                                    <span class="badge {% if record.status == 'Present' %}bg-success{% elif record.status == 'Late' %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ record.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="3" class="text-center text-muted">No attendance records found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0"><i class="fas fa-award"></i> Scholarship Applications</h5></div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Scholarship</th>
+                                <th>Status</th>
+                                <th>Success</th>
+                                <th>Applied</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for app in applications %}
+                            {% set status = app.status.value if app.status and app.status.value is defined else app.status %}
+                            <tr>
+                                <td>{{ app.scholarship.title if app.scholarship else 'Scholarship' }}</td>
+                                <td>
+                                    <span class="badge {% if status == 'approved' %}bg-success{% elif status == 'rejected' %}bg-danger{% elif status == 'under_review' %}bg-info{% else %}bg-warning{% endif %}">
+                                        {{ status|replace('_', ' ')|title }}
+                                    </span>
+                                </td>
+                                <td>{{ "%.0f"|format((app.ai_success_probability or 0) * 100) }}%</td>
+                                <td>{{ app.application_date.strftime('%d %b %Y') if app.application_date else 'N/A' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted">No scholarship applications found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0"><i class="fas fa-comments"></i> Counselling</h5></div>
+            <div class="card-body">
+                {% for request in counselling_requests %}
+                {% set cstatus = request.status.value if request.status and request.status.value is defined else request.status %}
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ request.topic }}</strong>
+                        <span class="badge {% if cstatus == 'completed' %}bg-success{% elif cstatus == 'scheduled' %}bg-info{% else %}bg-warning{% endif %}">
+                            {{ cstatus|replace('_', ' ')|title }}
+                        </span>
+                    </div>
+                    <small class="text-muted">{{ request.description or 'No description' }}</small>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No counselling requests found.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

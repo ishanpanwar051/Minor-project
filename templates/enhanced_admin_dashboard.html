@@ -111,13 +111,35 @@
                                 <button type="button" class="btn btn-outline-primary" onclick="refreshData()">
                                     <i class="fas fa-sync-alt"></i> Refresh
                                 </button>
-                                <button type="button" class="btn btn-outline-success" onclick="exportReport()">
+                                <a class="btn btn-outline-success" href="{{ url_for('main.export_admin_report') }}">
                                     <i class="fas fa-download"></i> Export
-                                </button>
+                                </a>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="dashboard-card">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <strong class="me-2"><i class="fas fa-bolt"></i> Quick Actions</strong>
+                <a class="btn btn-primary btn-sm" href="{{ url_for('main.students') }}">
+                    <i class="fas fa-users"></i> View Students
+                </a>
+                <a class="btn btn-danger btn-sm" href="{{ url_for('main.risk', risk_level='High') }}">
+                    <i class="fas fa-exclamation-triangle"></i> High Risk
+                </a>
+                <a class="btn btn-success btn-sm" href="{{ url_for('main.add_student') }}">
+                    <i class="fas fa-user-plus"></i> Add Student
+                </a>
+                <a class="btn btn-info btn-sm" href="{{ url_for('scholarship.view_applications') }}">
+                    <i class="fas fa-file-alt"></i> Applications
+                </a>
+                <a class="btn btn-warning btn-sm" href="{{ url_for('main.auto_update_risk_all', next=url_for('main.admin_dashboard')) }}">
+                    <i class="fas fa-sync"></i> Recalculate Risk
+                </a>
             </div>
         </div>
 
@@ -211,6 +233,62 @@
         <div class="tab-content" id="adminTabsContent">
             <!-- Overview Tab -->
             <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="dashboard-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0"><i class="fas fa-user-shield"></i> Students Needing Attention</h5>
+                                <a class="btn btn-sm btn-outline-danger" href="{{ url_for('main.risk') }}">Open Risk Analysis</a>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Student</th>
+                                            <th>Department</th>
+                                            <th>GPA</th>
+                                            <th>Attendance</th>
+                                            <th>Risk</th>
+                                            <th>Reason</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for student in risky_students %}
+                                        {% set rp = student.risk_profile %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ student.first_name }} {{ student.last_name }}</strong>
+                                                <br><small class="text-muted">{{ student.student_id }}</small>
+                                            </td>
+                                            <td>{{ student.department or 'N/A' }}</td>
+                                            <td>{{ "%.1f"|format(student.gpa or 0) }}</td>
+                                            <td>{{ "%.1f"|format(rp.attendance_rate if rp else 0) }}%</td>
+                                            <td>
+                                                {% set level = rp.risk_level if rp else 'N/A' %}
+                                                <span class="badge {% if level == 'Critical' %}bg-dark{% elif level == 'High' %}bg-danger{% elif level == 'Medium' %}bg-warning{% else %}bg-success{% endif %}">
+                                                    {{ level }}
+                                                </span>
+                                            </td>
+                                            <td><small>{{ rp.risk_reasons if rp else 'Not calculated' }}</small></td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a class="btn btn-outline-primary" href="{{ url_for('main.student_detail', student_id=student.id) }}">View</a>
+                                                    <a class="btn btn-outline-warning" href="{{ url_for('main.update_risk', student_id=student.id, next=url_for('main.admin_dashboard')) }}">Update</a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="7" class="text-muted text-center py-3">No risk profiles available yet.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="row">
                     <!-- Application Trends -->
                     <div class="col-md-8">
@@ -248,12 +326,17 @@
                                             <td>{{ scholarship.title }}</td>
                                             <td>{{ scholarship.application_count }}</td>
                                             <td>
+                                                {% set success_prob = scholarship.avg_success_prob or 0 %}
                                                 <div class="progress" style="height: 20px;">
-                                                    <div class="progress-bar" style="width: {{ "%.0f"|format(scholarship.avg_success_prob * 100) }}%">
-                                                        {{ "%.1f"|format(scholarship.avg_success_prob * 100) }}%
+                                                    <div class="progress-bar" style="width: {{ "%.0f"|format(success_prob * 100) }}%">
+                                                        {{ "%.1f"|format(success_prob * 100) }}%
                                                     </div>
                                                 </div>
                                             </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="3" class="text-muted text-center py-3">No scholarship applications yet</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -371,7 +454,20 @@
                         <div class="dashboard-card">
                             <h5><i class="fas fa-exclamation-triangle"></i> At-Risk Students</h5>
                             <div id="atRiskStudents">
-                                <!-- Populated by JavaScript -->
+                                {% for student in risky_students[:5] %}
+                                {% set rp = student.risk_profile %}
+                                <div class="alert {% if rp and rp.risk_level == 'Critical' %}alert-danger{% else %}alert-warning{% endif %} py-2 mb-2">
+                                    <div class="d-flex justify-content-between gap-2">
+                                        <div>
+                                            <strong>{{ student.first_name }} {{ student.last_name }}</strong>
+                                            <br><small>{{ rp.risk_level if rp else 'N/A' }} Risk | Score: {{ "%.0f"|format(rp.risk_score if rp else 0) }} | {{ rp.risk_reasons if rp else 'Not calculated' }}</small>
+                                        </div>
+                                        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('main.student_detail', student_id=student.id) }}">View</a>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <p class="text-muted">No high-risk students found.</p>
+                                {% endfor %}
                             </div>
                         </div>
                     </div>
@@ -460,8 +556,8 @@
 
         // Department Chart
         const deptCtx = document.getElementById('deptChart').getContext('2d');
-        const deptLabels = [{% for dept in dept_distribution %}'{{ dept.department }}'{% if not loop.last %},{% endif %}{% endfor %}];
-        const deptData = [{% for dept in dept_distribution %}{{ dept.student_count }}{% if not loop.last %},{% endif %}{% endfor %}];
+        const deptLabels = [{% for dept in dept_distribution %}{{ (dept.department or 'Unassigned')|tojson }}{% if not loop.last %},{% endif %}{% endfor %}];
+        const deptData = [{% for dept in dept_distribution %}{{ dept.student_count or 0 }}{% if not loop.last %},{% endif %}{% endfor %}];
         new Chart(deptCtx, {
             type: 'doughnut',
             data: {
@@ -486,7 +582,7 @@
             data: {
                 labels: ['Pending', 'Approved', 'Rejected', 'Under Review'],
                 datasets: [{
-                    data: [{{ pending_applications }}, {{ approved_applications }}, {{ rejected_applications }}, 8],
+                    data: [{{ pending_applications }}, {{ approved_applications }}, {{ rejected_applications }}, {{ under_review_applications }}],
                     backgroundColor: ['#ffc107', '#28a745', '#dc3545', '#17a2b8']
                 }]
             },
@@ -551,7 +647,8 @@
                 .then(data => {
                     // Update predictions table
                     const table = document.getElementById('predictionsTable');
-                    table.innerHTML = data.success_predictions.map(pred => `
+                    const successPredictions = data.success_predictions || [];
+                    table.innerHTML = successPredictions.map(pred => `
                         <tr>
                             <td>${pred.scholarship}</td>
                             <td>${pred.current_success_rate.toFixed(1)}%</td>
@@ -564,26 +661,47 @@
                                 </div>
                             </td>
                         </tr>
-                    `).join('');
+                    `).join('') || '<tr><td colspan="4" class="text-muted text-center">No prediction data available</td></tr>';
 
                     // Update at-risk students
                     const atRiskDiv = document.getElementById('atRiskStudents');
-                    atRiskDiv.innerHTML = data.at_risk_students.slice(0, 5).map(student => `
-                        <div class="alert alert-warning py-2 mb-2">
-                            <strong>${student.student.first_name} ${student.student.last_name}</strong>
-                            <br><small>Risk Score: ${student.risk_score.toFixed(0)}% - ${student.risk_factors.join(', ')}</small>
+                    const atRiskStudents = data.at_risk_students || [];
+                    atRiskDiv.innerHTML = atRiskStudents.slice(0, 5).map(student => `
+                        <div class="alert ${student.risk_level === 'Critical' ? 'alert-danger' : 'alert-warning'} py-2 mb-2">
+                            <div class="d-flex justify-content-between gap-2">
+                                <div>
+                                    <strong>${student.student.first_name} ${student.student.last_name}</strong>
+                                    <br><small>${student.risk_level} Risk | Score: ${(student.risk_score || 0).toFixed(0)} | ${student.risk_factors.join(', ')}</small>
+                                    <br><small class="text-muted">${student.student.student_id} • ${student.student.department || 'N/A'} • Attendance ${(student.student.attendance_rate || 0).toFixed(1)}%</small>
+                                </div>
+                                <div class="btn-group btn-group-sm align-self-start">
+                                    <a class="btn btn-outline-primary" href="${student.profile_url}">View</a>
+                                    <a class="btn btn-outline-warning" href="${student.update_url}">Update</a>
+                                </div>
+                            </div>
                         </div>
-                    `).join('');
+                    `).join('') || '<p class="text-muted">No high-risk students found.</p>';
 
                     // Update scholarship recommendations
                     const recDiv = document.getElementById('scholarshipRecommendations');
-                    recDiv.innerHTML = data.scholarship_recommendations.map(rec => `
+                    const recommendations = data.scholarship_recommendations || [];
+                    recDiv.innerHTML = recommendations.map(rec => `
                         <div class="alert alert-info py-2 mb-2">
                             <strong>${rec.type} Scholarship</strong>
                             <br><small>${rec.reason}</small>
                             <br><small class="text-muted">Priority: ${rec.priority}</small>
                         </div>
-                    `).join('');
+                    `).join('') || '<p class="text-muted">No recommendations available.</p>';
+                })
+                .catch(() => {
+                    document.getElementById('predictionsTable').innerHTML =
+                        '<tr><td colspan="4" class="text-muted text-center">Prediction service unavailable</td></tr>';
+                    if (!document.getElementById('atRiskStudents').children.length) {
+                        document.getElementById('atRiskStudents').innerHTML =
+                            '<p class="text-muted">Prediction service unavailable.</p>';
+                    }
+                    document.getElementById('scholarshipRecommendations').innerHTML =
+                        '<p class="text-muted">Prediction service unavailable.</p>';
                 });
         }
 
@@ -597,7 +715,7 @@
 
         // Export report
         function exportReport() {
-            alert('Export functionality would be implemented here');
+            window.location.href = "{{ url_for('main.export_admin_report') }}";
         }
 
         // Update analytics

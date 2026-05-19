@@ -9,9 +9,9 @@
         <button class="btn btn-outline-primary" onclick="window.print()">
             <i class="fas fa-print"></i> Print Report
         </button>
-        <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#backupModal">
+        <a class="btn btn-outline-success" href="{{ url_for('main.admin_dashboard') }}">
             <i class="fas fa-download"></i> Backup Data
-        </button>
+        </a>
     </div>
 </div>
 
@@ -21,7 +21,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i class="fas fa-users fa-2x text-primary mb-2"></i>
-                <h4 class="card-title">10</h4>
+                <h4 class="card-title">{{ stats.total_users|default(0) }}</h4>
                 <p class="card-text text-muted">Total Users</p>
             </div>
         </div>
@@ -30,7 +30,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i class="fas fa-user-graduate fa-2x text-success mb-2"></i>
-                <h4 class="card-title">8</h4>
+                <h4 class="card-title">{{ stats.total_students|default(0) }}</h4>
                 <p class="card-text text-muted">Total Students</p>
             </div>
         </div>
@@ -39,7 +39,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i class="fas fa-calendar-check fa-2x text-info mb-2"></i>
-                <h4 class="card-title">25</h4>
+                <h4 class="card-title">{{ stats.attendance_records|default(0) }}</h4>
                 <p class="card-text text-muted">Attendance Records</p>
             </div>
         </div>
@@ -48,7 +48,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <i class="fas fa-exclamation-triangle fa-2x text-danger mb-2"></i>
-                <h4 class="card-title">8</h4>
+                <h4 class="card-title">{{ stats.risk_profiles|default(0) }}</h4>
                 <p class="card-text text-muted">Risk Profiles</p>
             </div>
         </div>
@@ -64,18 +64,18 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#userModal">
-                        <i class="fas fa-user-plus"></i> Add New User
-                    </button>
-                    <button class="btn btn-outline-info">
+                    <a class="btn btn-outline-primary" href="{{ url_for('main.add_student') }}">
+                        <i class="fas fa-user-plus"></i> Add New Student
+                    </a>
+                    <a class="btn btn-outline-info" href="{{ url_for('main.students') }}">
                         <i class="fas fa-list"></i> View All Users
-                    </button>
-                    <button class="btn btn-outline-warning">
-                        <i class="fas fa-key"></i> Reset Passwords
-                    </button>
-                    <button class="btn btn-outline-secondary">
-                        <i class="fas fa-user-shield"></i> Manage Permissions
-                    </button>
+                    </a>
+                    <a class="btn btn-outline-warning" href="{{ url_for('scholarship.view_applications') }}">
+                        <i class="fas fa-file-alt"></i> Review Applications
+                    </a>
+                    <a class="btn btn-outline-secondary" href="{{ url_for('counselling.admin_manage') }}">
+                        <i class="fas fa-user-shield"></i> Manage Counselling
+                    </a>
                 </div>
             </div>
         </div>
@@ -88,18 +88,18 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#importModal">
-                        <i class="fas fa-upload"></i> Import Students
-                    </button>
-                    <button class="btn btn-outline-primary">
+                    <a class="btn btn-outline-success" href="{{ url_for('scholarship.manage_scholarships') }}">
+                        <i class="fas fa-award"></i> Manage Scholarships
+                    </a>
+                    <a class="btn btn-outline-primary" href="{{ url_for('main.admin_dashboard') }}">
                         <i class="fas fa-download"></i> Export Reports
-                    </button>
-                    <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cleanupModal">
-                        <i class="fas fa-trash"></i> Cleanup Old Data
-                    </button>
-                    <button class="btn btn-outline-info">
-                        <i class="fas fa-sync"></i> Sync Database
-                    </button>
+                    </a>
+                    <a class="btn btn-outline-danger" href="{{ url_for('main.risk') }}">
+                        <i class="fas fa-exclamation-triangle"></i> Risk Analysis
+                    </a>
+                    <a class="btn btn-outline-info" href="{{ url_for('main.attendance') }}">
+                        <i class="fas fa-calendar-check"></i> Attendance
+                    </a>
                 </div>
             </div>
         </div>

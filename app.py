@@ -38,8 +38,8 @@ def create_app(config_name='default'):
     try:
         from realtime_notifications import init_realtime_notifications
         socketio = init_realtime_notifications(app)
-    except ImportError:
-        logger.warning("Real-time notifications not available")
+    except Exception as exc:
+        logger.warning("Real-time notifications not available: %s", exc)
         socketio = None
     
     # Configure login
@@ -51,6 +51,19 @@ def create_app(config_name='default'):
     def load_user(user_id):
         from models import User
         return User.query.get(int(user_id))
+
+    def register_optional_blueprint(import_path, blueprint_name):
+        """Keep optional modules from blocking the core admin/student panels."""
+        try:
+            module_name, object_name = import_path.rsplit('.', 1)
+            module = __import__(module_name, fromlist=[object_name])
+            app.register_blueprint(getattr(module, object_name))
+        except Exception as exc:
+            app.logger.warning(
+                "Optional blueprint %s skipped: %s",
+                blueprint_name,
+                exc
+            )
     
     # Register blueprints
     from routes import main_bp
@@ -68,33 +81,19 @@ def create_app(config_name='default'):
     from ai_dashboard_routes import ai_dashboard_bp
     app.register_blueprint(ai_dashboard_bp)
     
-    # Register AI Assistant
-    from ai_assistant_routes import ai_assistant_bp
-    app.register_blueprint(ai_assistant_bp)
-
-    # Register general chatbot API used by the standalone chatbot UI
-    from chatbot_routes import chatbot_bp
-    app.register_blueprint(chatbot_bp)
+    # Optional student-support features. The core panels still load if one
+    # optional integration is unavailable in a lightweight environment.
+    register_optional_blueprint('ai_assistant_routes.ai_assistant_bp', 'AI Assistant')
+    register_optional_blueprint('chatbot_routes.chatbot_bp', 'Chatbot')
     
     # Register Counselling System
     from counselling_routes import counselling_bp
     app.register_blueprint(counselling_bp)
     
-    # Register parent blueprint
-    from parent_routes import parent_bp
-    app.register_blueprint(parent_bp)
-    
-    # Register support blueprint
-    from support_routes import support_bp
-    app.register_blueprint(support_bp)
-    
-    # Register analysis blueprint
-    from analysis_routes import analysis_bp
-    app.register_blueprint(analysis_bp)
-    
-    # Register daily update system
-    from update_routes import update_bp
-    app.register_blueprint(update_bp)
+    register_optional_blueprint('parent_routes.parent_bp', 'Parent Portal')
+    register_optional_blueprint('support_routes.support_bp', 'Student Support')
+    register_optional_blueprint('analysis_routes.analysis_bp', 'Analysis')
+    register_optional_blueprint('update_routes.update_bp', 'Daily Updates')
     
     # Error handlers
     @app.errorhandler(404)
