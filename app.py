@@ -130,11 +130,45 @@ def create_app(config_name='default'):
             from models_support import StudentGoal, MoodLog
             
             db.create_all()
+            apply_sqlite_schema_updates(app)
             app.logger.info('Database tables created successfully')
         except Exception as e:
             app.logger.error(f'Error creating database tables: {str(e)}')
     
     return app
+
+def apply_sqlite_schema_updates(app):
+    """Add new model columns to older local SQLite databases without deleting data."""
+    from models import db
+    from sqlalchemy import inspect, text
+
+    if db.engine.dialect.name != 'sqlite':
+        return
+
+    inspector = inspect(db.engine)
+    existing_tables = set(inspector.get_table_names())
+
+    for table in db.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            continue
+
+        existing_columns = {column['name'] for column in inspector.get_columns(table.name)}
+        for column in table.columns:
+            if column.name in existing_columns or column.primary_key:
+                continue
+
+            column_type = column.type.compile(dialect=db.engine.dialect)
+            db.session.execute(
+                text(f'ALTER TABLE {table.name} ADD COLUMN {column.name} {column_type}')
+            )
+            app.logger.info('Added missing SQLite column: %s.%s', table.name, column.name)
+
+    if 'users' in existing_tables:
+        user_columns = {column['name'] for column in inspect(db.engine).get_columns('users')}
+        if 'is_active' in user_columns:
+            db.session.execute(text('UPDATE users SET is_active = 1 WHERE is_active IS NULL'))
+
+    db.session.commit()
 
 def run_app():
     """Run the application with SocketIO if available"""
