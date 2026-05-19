@@ -1,8 +1,100 @@
 {% extends "base.html" %}
+
+{% block title %}Review Application - EduGuard{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <h2>Review Application</h2>
-    <p>Application review interface is under construction.</p>
-    <a href="{{ url_for('main.admin_dashboard') }}" class="btn btn-secondary">Back</a>
+{% set status = application.status.value if application.status and application.status.value is defined else application.status %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-clipboard-check"></i> Review Application</h1>
+    <a href="{{ url_for('scholarship.view_applications') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Applications
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0">Student</h5></div>
+            <div class="card-body">
+                {% if application.student %}
+                <h5>{{ application.student.first_name }} {{ application.student.last_name }}</h5>
+                <p class="mb-1"><strong>ID:</strong> {{ application.student.student_id }}</p>
+                <p class="mb-1"><strong>Email:</strong> {{ application.student.email }}</p>
+                <p class="mb-1"><strong>Department:</strong> {{ application.student.department or 'N/A' }}</p>
+                <p class="mb-0"><strong>GPA:</strong> {{ application.student.gpa or 'N/A' }}</p>
+                {% else %}
+                <p class="text-muted mb-0">Student record not found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0">Scholarship</h5></div>
+            <div class="card-body">
+                {% if application.scholarship %}
+                <h5>{{ application.scholarship.title }}</h5>
+                <p class="mb-1"><strong>Provider:</strong> {{ application.scholarship.provider }}</p>
+                <p class="mb-1"><strong>Amount:</strong> {{ application.scholarship.currency or 'USD' }} {{ "%.0f"|format(application.scholarship.amount or 0) }}</p>
+                <p class="mb-0"><strong>Min GPA:</strong> {{ application.scholarship.min_gpa or 'N/A' }}</p>
+                {% else %}
+                <p class="text-muted mb-0">Scholarship record not found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h5 class="mb-0">Application Review</h5></div>
+    <div class="card-body">
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <strong>Current Status</strong><br>
+                <span class="badge {% if status == 'approved' %}bg-success{% elif status == 'rejected' %}bg-danger{% elif status == 'under_review' %}bg-info{% else %}bg-warning{% endif %}">
+                    {{ (status or 'pending')|replace('_', ' ')|title }}
+                </span>
+            </div>
+            <div class="col-md-4">
+                <strong>AI Eligibility</strong><br>
+                {{ "%.0f"|format(application.ai_eligibility_score or 0) }}%
+            </div>
+            <div class="col-md-4">
+                <strong>AI Success Probability</strong><br>
+                {{ "%.0f"|format((application.ai_success_probability or 0) * 100) }}%
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <strong>Personal Statement</strong>
+            <p class="text-muted">{{ application.personal_statement or 'No personal statement provided.' }}</p>
+        </div>
+
+        <div class="mb-3">
+            <strong>Financial Justification</strong>
+            <p class="text-muted">{{ application.financial_justification or 'No financial justification provided.' }}</p>
+        </div>
+
+        <form method="post">
+            <div class="mb-3">
+                <label class="form-label">Update Status</label>
+                <select class="form-select" name="status" required>
+                    <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="under_review" {% if status == 'under_review' %}selected{% endif %}>Under Review</option>
+                    <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
+                    <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
+                    <option value="withdrawn" {% if status == 'withdrawn' %}selected{% endif %}>Withdrawn</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Review Comments</label>
+                <textarea class="form-control" name="review_comments" rows="4">{{ application.review_comments or '' }}</textarea>
+            </div>
+            <button class="btn btn-primary" type="submit">
+                <i class="fas fa-save"></i> Save Review
+            </button>
+        </form>
+    </div>
 </div>
 {% endblock %}

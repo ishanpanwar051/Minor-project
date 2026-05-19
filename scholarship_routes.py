@@ -133,16 +133,23 @@ def view_applications():
     """View all scholarship applications"""
     status_filter = request.args.get('status', 'all')
     
-    query = ScholarshipApplication.query.join(Scholarship).join(Student).join(User)
+    query = ScholarshipApplication.query
     
     if status_filter != 'all':
-        query = query.filter(ScholarshipApplication.status == ApplicationStatus[status_filter.upper()])
+        try:
+            query = query.filter(
+                ScholarshipApplication.status == ApplicationStatus[status_filter.upper()]
+            )
+        except KeyError:
+            flash('Invalid application status filter.', 'warning')
+            return redirect(url_for('scholarship.view_applications'))
     
     applications = query.order_by(ScholarshipApplication.application_date.desc()).all()
     
     return render_template('scholarship/applications.html', 
                          applications=applications, 
-                         status_filter=status_filter)
+                         status_filter=status_filter,
+                         statuses=ApplicationStatus)
 
 @scholarship_bp.route('/application/<int:application_id>/review', methods=['GET', 'POST'])
 @login_required

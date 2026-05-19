@@ -1,8 +1,105 @@
 {% extends "base.html" %}
+
+{% block title %}Scholarship Applications - EduGuard{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <h2>Scholarship Applications</h2>
-    <p>Review applications interface is under construction.</p>
-    <a href="{{ url_for('main.admin_dashboard') }}" class="btn btn-secondary">Back</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1"><i class="fas fa-file-alt"></i> Scholarship Applications</h1>
+        <div class="text-muted">Review student applications and update approval status.</div>
+    </div>
+    <a href="{{ url_for('main.admin_dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+</div>
+
+<form class="row g-2 mb-4" method="get" action="{{ url_for('scholarship.view_applications') }}">
+    <div class="col-md-3">
+        <select class="form-select" name="status" onchange="this.form.submit()">
+            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
+            {% for status in statuses %}
+            <option value="{{ status.value }}" {% if status_filter == status.value %}selected{% endif %}>
+                {{ status.value|replace('_', ' ')|title }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2 d-grid">
+        <button class="btn btn-primary" type="submit"><i class="fas fa-filter"></i> Filter</button>
+    </div>
+</form>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-list"></i> Applications</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Scholarship</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>AI Success</th>
+                        <th>Applied</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for application in applications %}
+                    {% set status = application.status.value if application.status and application.status.value is defined else application.status %}
+                    <tr>
+                        <td>
+                            {% if application.student %}
+                            <strong>{{ application.student.first_name }} {{ application.student.last_name }}</strong>
+                            <br><small class="text-muted">{{ application.student.student_id }}</small>
+                            {% else %}
+                            <span class="text-muted">Unknown student</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if application.scholarship %}
+                            <strong>{{ application.scholarship.title }}</strong>
+                            <br><small class="text-muted">{{ application.scholarship.provider }}</small>
+                            {% else %}
+                            <span class="text-muted">Unknown scholarship</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if application.scholarship %}
+                            {{ application.scholarship.currency or 'USD' }} {{ "%.0f"|format(application.scholarship.amount or 0) }}
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge {% if status == 'approved' %}bg-success{% elif status == 'rejected' %}bg-danger{% elif status == 'under_review' %}bg-info{% elif status == 'withdrawn' %}bg-secondary{% else %}bg-warning{% endif %}">
+                                {{ (status or 'pending')|replace('_', ' ')|title }}
+                            </span>
+                        </td>
+                        <td>{{ "%.0f"|format((application.ai_success_probability or 0) * 100) }}%</td>
+                        <td>{{ application.application_date.strftime('%d %b %Y') if application.application_date else 'N/A' }}</td>
+                        <td>
+                            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('scholarship.review_application', application_id=application.id) }}">
+                                Review
+                            </a>
+                            {% if application.student %}
+                            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('main.student_detail', student_id=application.student.id) }}">
+                                Student
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">No applications found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 {% endblock %}
