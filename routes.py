@@ -485,6 +485,40 @@ def student_dashboard():
         flash(f'Error loading dashboard: {str(e)}', 'danger')
         return redirect(url_for('auth.login'))
 
+@main_bp.route('/student/attendance')
+@login_required
+def student_attendance():
+    """Student's own attendance history."""
+    if not current_user.is_authenticated or current_user.role != 'student':
+        flash('Student access required', 'danger')
+        return redirect(url_for('auth.login'))
+
+    student = get_student_for_current_user()
+    if not student:
+        flash('Student profile not found', 'danger')
+        return redirect(url_for('auth.login'))
+
+    records = Attendance.query.filter_by(student_id=student.id).order_by(
+        Attendance.date.desc()
+    ).limit(120).all()
+
+    total_records = len(records)
+    present_count = len([record for record in records if record.status == 'Present'])
+    absent_count = len([record for record in records if record.status == 'Absent'])
+    late_count = len([record for record in records if record.status == 'Late'])
+    attendance_rate = (present_count / total_records * 100) if total_records else 0
+
+    return render_template(
+        'student_attendance.html',
+        student=student,
+        attendance_records=records,
+        total_records=total_records,
+        present_count=present_count,
+        absent_count=absent_count,
+        late_count=late_count,
+        attendance_rate=round(attendance_rate, 1)
+    )
+
 # Faculty dashboard
 @main_bp.route('/faculty/dashboard')
 @login_required

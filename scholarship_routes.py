@@ -201,20 +201,27 @@ def scholarship_portal():
         flash('Student profile not found', 'danger')
         return redirect(url_for('auth.login'))
     
-    # Get available scholarships
-    scholarships = Scholarship.query.filter(
-        Scholarship.status == ScholarshipStatus.ACTIVE,
-        Scholarship.application_deadline > datetime.utcnow()
-    ).all()
+    try:
+        scholarships = Scholarship.query.filter(
+            Scholarship.status == ScholarshipStatus.ACTIVE,
+            Scholarship.application_deadline > datetime.utcnow()
+        ).all()
+    except Exception as exc:
+        print(f"Scholarship portal load error: {exc}")
+        scholarships = []
     
     # Filter by eligibility
     eligible_scholarships = []
     for scholarship in scholarships:
-        if is_student_eligible(student, scholarship):
+        if safe_is_student_eligible(student, scholarship):
             eligible_scholarships.append(scholarship)
     
     # Get student's applications
-    my_applications = ScholarshipApplication.query.filter_by(student_id=student.id).all()
+    try:
+        my_applications = ScholarshipApplication.query.filter_by(student_id=student.id).all()
+    except Exception as exc:
+        print(f"Student applications load error: {exc}")
+        my_applications = []
     
     return render_template('scholarship/portal.html', 
                          scholarships=eligible_scholarships,
@@ -244,7 +251,7 @@ def apply_scholarship(scholarship_id):
         return redirect(url_for('scholarship.scholarship_portal'))
     
     # Check eligibility
-    if not is_student_eligible(student, scholarship):
+    if not safe_is_student_eligible(student, scholarship):
         flash('You are not eligible for this scholarship', 'danger')
         return redirect(url_for('scholarship.scholarship_portal'))
     
@@ -302,7 +309,7 @@ def api_scholarships():
     try:
         print(f"[API] Fetching scholarships for user: {current_user.email}")
         
-        scholarships = Scholarship.query.filter_by(status='active').all()
+        scholarships = Scholarship.query.filter_by(status=ScholarshipStatus.ACTIVE).all()
         print(f"[API] Found {len(scholarships)} scholarships")
         
         data = []
@@ -447,7 +454,7 @@ def is_student_eligible(student, scholarship):
     
     # Department requirement
     if scholarship.departments:
-        eligible_departments = json.loads(scholarship.departments)
+        eligible_departments = parse_json_list(scholarship.departments)
         if eligible_departments and student.department not in eligible_departments:
             return False
     
@@ -459,6 +466,30 @@ def is_student_eligible(student, scholarship):
             return False
     
     return True
+
+def safe_is_student_eligible(student, scholarship):
+    """Eligibility wrapper that keeps one bad scholarship row from crashing the portal."""
+    try:
+        return is_student_eligible(student, scholarship)
+    except Exception as exc:
+        print(f"Eligibility check failed for scholarship {getattr(scholarship, 'id', 'unknown')}: {exc}")
+        return False
+
+def parse_json_list(value):
+    """Accept JSON arrays, comma-separated text, or a single plain value."""
+    if not value:
+        return []
+    if isinstance(value, list):
+        return value
+    try:
+        parsed = json.loads(value)
+        if isinstance(parsed, list):
+            return parsed
+        if parsed:
+            return [str(parsed)]
+        return []
+    except Exception:
+        return [item.strip() for item in str(value).split(',') if item.strip()]
 
 def calculate_eligibility_score(student, scholarship):
     """Calculate AI eligibility score (0-100)"""
@@ -533,7 +564,7 @@ def get_eligibility_details(student, scholarship):
         details['credits_met'] = False
     
     if scholarship.departments:
-        eligible_departments = json.loads(scholarship.departments)
+        eligible_departments = parse_json_list(scholarship.departments)
         if eligible_departments and student.department not in eligible_departments:
             details['department_met'] = False
     

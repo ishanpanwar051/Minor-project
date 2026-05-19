@@ -168,6 +168,40 @@ def apply_sqlite_schema_updates(app):
         if 'is_active' in user_columns:
             db.session.execute(text('UPDATE users SET is_active = 1 WHERE is_active IS NULL'))
 
+    enum_normalizations = {
+        'scholarships': {
+            'draft': 'DRAFT',
+            'active': 'ACTIVE',
+            'closed': 'CLOSED',
+            'expired': 'EXPIRED',
+        },
+        'scholarship_applications': {
+            'pending': 'PENDING',
+            'under_review': 'UNDER_REVIEW',
+            'approved': 'APPROVED',
+            'rejected': 'REJECTED',
+            'withdrawn': 'WITHDRAWN',
+        },
+        'counselling_requests': {
+            'requested': 'REQUESTED',
+            'scheduled': 'SCHEDULED',
+            'completed': 'COMPLETED',
+            'cancelled': 'CANCELLED',
+        },
+    }
+
+    for table_name, replacements in enum_normalizations.items():
+        if table_name not in existing_tables:
+            continue
+        table_columns = {column['name'] for column in inspect(db.engine).get_columns(table_name)}
+        if 'status' not in table_columns:
+            continue
+        for old_value, new_value in replacements.items():
+            db.session.execute(
+                text(f'UPDATE {table_name} SET status = :new_value WHERE status = :old_value'),
+                {'old_value': old_value, 'new_value': new_value}
+            )
+
     db.session.commit()
 
 def run_app():
