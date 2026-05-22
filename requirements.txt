@@ -10,6 +10,7 @@ werkzeug==2.3.7
 # === DATABASE ===
 sqlalchemy==2.0.21
 pymysql==1.1.0
+psycopg2-binary==2.9.9
 
 # === DATA PROCESSING ===
 pandas==2.1.3
