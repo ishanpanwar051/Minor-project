@@ -349,34 +349,17 @@
                         <div class="dashboard-card">
                             <h5><i class="fas fa-clock"></i> Recent Activity</h5>
                             <div class="list-group list-group-flush">
+                                {% for item in recent_activity %}
                                 <div class="list-group-item d-flex justify-content-between align-items-center">
                                     <div>
-                                        <i class="fas fa-file-alt text-primary"></i>
-                                        <span class="ms-2">New scholarship application</span>
+                                        <i class="fas {{ item.icon }} {{ item.color }}"></i>
+                                        <a class="ms-2 text-decoration-none text-dark" href="{{ item.url }}">{{ item.message }}</a>
                                     </div>
-                                    <small class="text-muted">2 mins ago</small>
+                                    <small class="text-muted">{{ item.relative_time }}</small>
                                 </div>
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <i class="fas fa-user-plus text-success"></i>
-                                        <span class="ms-2">New student registered</span>
-                                    </div>
-                                    <small class="text-muted">15 mins ago</small>
-                                </div>
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <i class="fas fa-comments text-info"></i>
-                                        <span class="ms-2">Counselling request submitted</span>
-                                    </div>
-                                    <small class="text-muted">1 hour ago</small>
-                                </div>
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <i class="fas fa-check text-success"></i>
-                                        <span class="ms-2">Application approved</span>
-                                    </div>
-                                    <small class="text-muted">2 hours ago</small>
-                                </div>
+                                {% else %}
+                                <div class="list-group-item text-muted text-center">No recent activity yet.</div>
+                                {% endfor %}
                             </div>
                         </div>
                     </div>
@@ -489,34 +472,19 @@
                     <div class="col-12">
                         <div class="dashboard-card">
                             <h5><i class="fas fa-bell"></i> System Alerts & Notifications</h5>
-                            
-                            <!-- Critical Alerts -->
-                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <strong>Critical:</strong> 5 scholarship applications have been pending for over 7 days
+                            {% for alert in admin_alerts %}
+                            <div class="alert alert-{{ alert.level }} alert-dismissible fade show" role="alert">
+                                <i class="fas {{ alert.icon }}"></i>
+                                <strong>{{ alert.label }}:</strong> {{ alert.message }}
+                                <a href="{{ alert.url }}" class="alert-link ms-2">Open</a>
                                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
-
-                            <!-- Warning Alerts -->
-                            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                                <i class="fas fa-exclamation-circle"></i>
-                                <strong>Warning:</strong> 3 scholarships expire in the next 48 hours
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-
-                            <!-- Info Alerts -->
-                            <div class="alert alert-info alert-dismissible fade show" role="alert">
-                                <i class="fas fa-info-circle"></i>
-                                <strong>Info:</strong> AI analysis shows 23% increase in scholarship applications this month
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-
-                            <!-- Success Alerts -->
-                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            {% else %}
+                            <div class="alert alert-success" role="alert">
                                 <i class="fas fa-check-circle"></i>
-                                <strong>Success:</strong> All counselling requests from this week have been scheduled
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                <strong>Healthy:</strong> No alerts found.
                             </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
@@ -531,16 +499,16 @@
         new Chart(trendsCtx, {
             type: 'line',
             data: {
-                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                labels: {{ weekly_labels|tojson }},
                 datasets: [{
                     label: 'Applications',
-                    data: [12, 19, 15, {{ recent_applications }}],
+                    data: {{ weekly_applications|tojson }},
                     borderColor: '#667eea',
                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
                     tension: 0.4
                 }, {
                     label: 'Approvals',
-                    data: [8, 12, 10, 14],
+                    data: {{ weekly_approvals|tojson }},
                     borderColor: '#28a745',
                     backgroundColor: 'rgba(40, 167, 69, 0.1)',
                     tension: 0.4
@@ -599,10 +567,10 @@
         new Chart(gpaCtx, {
             type: 'bar',
             data: {
-                labels: ['2.0-2.5', '2.5-3.0', '3.0-3.5', '3.5-4.0'],
+                labels: {{ gpa_labels|tojson }},
                 datasets: [{
                     label: 'Students',
-                    data: [5, 12, 18, 15],
+                    data: {{ gpa_data|tojson }},
                     backgroundColor: '#667eea'
                 }]
             },
@@ -622,10 +590,10 @@
         new Chart(demandCtx, {
             type: 'bar',
             data: {
-                labels: ['Next Month', 'Month 2', 'Month 3'],
+                labels: {{ demand_labels|tojson }},
                 datasets: [{
                     label: 'Predicted Applications',
-                    data: [45, 52, 48],
+                    data: {{ demand_data|tojson }},
                     backgroundColor: '#ff6b6b'
                 }]
             },

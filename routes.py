@@ -7,7 +7,7 @@ from app import create_app
 from models import (
     User, Student, Attendance, db, RiskProfile, Counselling, MentorAssignment,
     Alert, Scholarship, ScholarshipApplication, ScholarshipStatus,
-    ApplicationStatus
+    ApplicationStatus, CounsellingRequest, CounsellingStatus
 )
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, make_response
 from flask_login import login_user, logout_user, login_required, current_user
@@ -15,6 +15,7 @@ from datetime import datetime, date, timedelta
 from rbac_system import role_required, get_student_for_current_user, secure_redirect, admin_required
 from sqlalchemy import text, func
 import random
+import os
 
 try:
     from services.ml_service import ml_service
@@ -60,6 +61,174 @@ def faculty_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def _relative_time(timestamp):
+    if not timestamp:
+        return ''
+    delta = datetime.utcnow() - timestamp
+    if delta.days > 0:
+        return f'{delta.days} day{"s" if delta.days != 1 else ""} ago'
+    hours = delta.seconds // 3600
+    if hours:
+        return f'{hours} hour{"s" if hours != 1 else ""} ago'
+    minutes = max(1, delta.seconds // 60)
+    return f'{minutes} min ago'
+
+def _ensure_admin_dashboard_data():
+    """Keep the demo dashboard backed by useful data, even on old local DBs."""
+    try:
+        if os.environ.get('EDUGUARD_DEMO_DATA', 'true').lower() == 'false':
+            return
+        has_scholarship_data = Scholarship.query.count() and ScholarshipApplication.query.count()
+        has_real_risk = RiskProfile.query.filter(RiskProfile.risk_score > 0).count()
+        if not has_scholarship_data or not has_real_risk:
+            from demo_data import ensure_demo_data
+            ensure_demo_data()
+    except Exception as exc:
+        print(f"Demo data sync skipped: {exc}")
+        db.session.rollback()
+
+def _sync_all_risk_profiles():
+    from demo_data import sync_student_risk_inputs
+    for student in Student.query.all():
+        sync_student_risk_inputs(student)
+    db.session.commit()
+
+def _weekly_application_metrics():
+    labels = []
+    applications = []
+    approvals = []
+    today = datetime.utcnow()
+    ranges = []
+    for week in range(3, -1, -1):
+        start = today - timedelta(days=(week + 1) * 7)
+        end = today - timedelta(days=week * 7)
+        ranges.append((start, end))
+    for index, (start, end) in enumerate(ranges, start=1):
+        labels.append(f'Week {index}')
+        weekly_apps = ScholarshipApplication.query.filter(
+            ScholarshipApplication.application_date >= start,
+            ScholarshipApplication.application_date < end,
+        ).all()
+        applications.append(len(weekly_apps))
+        approvals.append(len([app for app in weekly_apps if app.status == ApplicationStatus.APPROVED]))
+    return labels, applications, approvals
+
+def _gpa_distribution_data():
+    buckets = [
+        ('0-4', 0, 4),
+        ('4-6', 4, 6),
+        ('6-8', 6, 8),
+        ('8-10', 8, 10.01),
+    ]
+    labels = []
+    counts = []
+    for label, lower, upper in buckets:
+        labels.append(label)
+        counts.append(Student.query.filter(Student.gpa >= lower, Student.gpa < upper).count())
+    return labels, counts
+
+def _build_recent_activity():
+    activity = []
+    for app in ScholarshipApplication.query.order_by(
+        ScholarshipApplication.application_date.desc()
+    ).limit(6).all():
+        activity.append({
+            'time': app.application_date,
+            'icon': 'fa-file-alt',
+            'color': 'text-primary',
+            'message': f'{app.student.first_name} applied for {app.scholarship.title}',
+            'url': url_for('scholarship.review_application', application_id=app.id),
+        })
+    for req in CounsellingRequest.query.order_by(
+        CounsellingRequest.request_date.desc()
+    ).limit(4).all():
+        activity.append({
+            'time': req.request_date,
+            'icon': 'fa-comments',
+            'color': 'text-info',
+            'message': f'{req.student.first_name} requested counselling: {req.topic}',
+            'url': url_for('counselling.request_details', request_id=req.id),
+        })
+    for user in User.query.filter_by(role='student').order_by(
+        User.created_at.desc()
+    ).limit(4).all():
+        activity.append({
+            'time': user.created_at,
+            'icon': 'fa-user-plus',
+            'color': 'text-success',
+            'message': f'New student account: {user.email}',
+            'url': url_for('main.students'),
+        })
+    activity.sort(key=lambda item: item['time'] or datetime.min, reverse=True)
+    for item in activity:
+        item['relative_time'] = _relative_time(item['time'])
+    return activity[:6]
+
+def _build_admin_alerts(risk_stats):
+    alerts = []
+    overdue_cutoff = datetime.utcnow() - timedelta(days=7)
+    overdue_pending = ScholarshipApplication.query.filter(
+        ScholarshipApplication.status == ApplicationStatus.PENDING,
+        ScholarshipApplication.application_date < overdue_cutoff,
+    ).count()
+    expiring_scholarships = Scholarship.query.filter(
+        Scholarship.status == ScholarshipStatus.ACTIVE,
+        Scholarship.application_deadline <= datetime.utcnow() + timedelta(days=7),
+        Scholarship.application_deadline >= datetime.utcnow(),
+    ).count()
+    urgent_counselling = CounsellingRequest.query.filter(
+        CounsellingRequest.priority.in_(['urgent', 'high']),
+        CounsellingRequest.status.in_([CounsellingStatus.REQUESTED, CounsellingStatus.SCHEDULED]),
+    ).count()
+    if risk_stats['critical']:
+        alerts.append({
+            'level': 'danger',
+            'icon': 'fa-exclamation-triangle',
+            'label': 'Critical',
+            'message': f'{risk_stats["critical"]} student(s) are in critical dropout risk.',
+            'url': url_for('main.risk', risk_level='Critical'),
+        })
+    if overdue_pending:
+        alerts.append({
+            'level': 'warning',
+            'icon': 'fa-clock',
+            'label': 'Pending',
+            'message': f'{overdue_pending} scholarship application(s) are pending for more than 7 days.',
+            'url': url_for('scholarship.view_applications', status='pending'),
+        })
+    if expiring_scholarships:
+        alerts.append({
+            'level': 'warning',
+            'icon': 'fa-calendar-times',
+            'label': 'Deadline',
+            'message': f'{expiring_scholarships} active scholarship(s) expire within the next 7 days.',
+            'url': url_for('scholarship.manage_scholarships'),
+        })
+    if urgent_counselling:
+        alerts.append({
+            'level': 'info',
+            'icon': 'fa-comments',
+            'label': 'Counselling',
+            'message': f'{urgent_counselling} urgent/high priority counselling request(s) need attention.',
+            'url': url_for('counselling.admin_requests'),
+        })
+    if not alerts:
+        alerts.append({
+            'level': 'success',
+            'icon': 'fa-check-circle',
+            'label': 'Healthy',
+            'message': 'No urgent admin alerts. All core workflows are up to date.',
+            'url': url_for('main.admin_dashboard'),
+        })
+    return alerts
+
+def _build_demand_prediction(total_recent):
+    base = max(total_recent, ScholarshipApplication.query.count(), 4)
+    return {
+        'labels': ['Next Month', 'Month 2', 'Month 3'],
+        'data': [base + 2, base + 4, base + 5],
+    }
+
 # Authentication routes are managed in auth_routes.py now.
 @main_bp.route('/')
 def index():
@@ -90,6 +259,9 @@ def admin_dashboard():
     try:
         from datetime import date, timedelta
         from sqlalchemy import func
+
+        _ensure_admin_dashboard_data()
+        _sync_all_risk_profiles()
         
         # Get statistics
         total_students = Student.query.count()
@@ -128,29 +300,7 @@ def admin_dashboard():
         # Calculate avg GPA
         avg_gpa = db.session.query(func.avg(Student.gpa)).scalar() or 7.5
         
-        # Get recent alerts
-        recent_alerts = [
-            {
-                'title': 'High Risk Alert',
-                'description': f'{risk_stats["critical"]} students showing critical risk levels',
-                'severity': 'Critical'
-            },
-            {
-                'title': 'Attendance Warning',
-                'description': f'{int(total_students * 0.2)} students below 60% attendance',
-                'severity': 'High'
-            },
-            {
-                'title': 'Performance Drop',
-                'description': f'{int(total_students * 0.15)} students with GPA below 6.0',
-                'severity': 'Medium'
-            },
-            {
-                'title': 'Positive Update',
-                'description': f'{risk_stats["low"]} students performing well',
-                'severity': 'Info'
-            }
-        ]
+        recent_alerts = _build_admin_alerts(risk_stats)
         
         # Get AI dashboard data for enhanced features (with error handling)
         scholarship_demand = []
@@ -169,7 +319,7 @@ def admin_dashboard():
             at_risk_students = identify_at_risk_students()
             scholarship_recommendations = generate_scholarship_recommendations()
             counselling_requests = CounsellingRequest.query.filter(
-                CounsellingRequest.status.in_(['requested', 'scheduled'])
+                CounsellingRequest.status.in_([CounsellingStatus.REQUESTED, CounsellingStatus.SCHEDULED])
             ).count()
             
         except ImportError as e:
@@ -224,6 +374,10 @@ def admin_dashboard():
             ScholarshipApplication.application_date >= datetime.utcnow() - timedelta(days=30)
         ).count()
         success_rate = (approved_applications / max(total_applications, 1)) * 100
+        weekly_labels, weekly_applications, weekly_approvals = _weekly_application_metrics()
+        gpa_labels, gpa_data = _gpa_distribution_data()
+        demand_prediction = _build_demand_prediction(recent_applications)
+        recent_activity = _build_recent_activity()
 
         return render_template('enhanced_admin_dashboard.html',
                              total_students=total_students,
@@ -245,7 +399,16 @@ def admin_dashboard():
                              success_rate=success_rate,
                              top_scholarships=top_scholarships,
                              dept_distribution=dept_distribution,
-                             counselling_requests=counselling_requests)
+                             counselling_requests=counselling_requests,
+                             weekly_labels=weekly_labels,
+                             weekly_applications=weekly_applications,
+                             weekly_approvals=weekly_approvals,
+                             gpa_labels=gpa_labels,
+                             gpa_data=gpa_data,
+                             demand_labels=demand_prediction['labels'],
+                             demand_data=demand_prediction['data'],
+                             recent_activity=recent_activity,
+                             admin_alerts=recent_alerts)
                              
     except Exception as e:
         # Fallback data in case of errors
@@ -1082,8 +1245,9 @@ def update_risk(student_id):
             risk_profile = RiskProfile(student_id=student_id)
             db.session.add(risk_profile)
         
-        # Update risk score using the holistic model method
-        risk_profile.update_risk_score()
+        # Update risk score using current GPA, attendance records and holistic flags.
+        from demo_data import sync_student_risk_inputs
+        risk_profile = sync_student_risk_inputs(student)
         
         # Add ML prediction
         try:
@@ -1146,11 +1310,8 @@ def auto_update_risk_all():
         students = Student.query.all()
         summary = {'updated': 0, 'low': 0, 'medium': 0, 'high': 0, 'critical': 0}
         for s in students:
-            rp = RiskProfile.query.filter_by(student_id=s.id).first()
-            if not rp:
-                rp = RiskProfile(student_id=s.id)
-                db.session.add(rp)
-            rp.update_risk_score()
+            from demo_data import sync_student_risk_inputs
+            rp = sync_student_risk_inputs(s)
             summary['updated'] += 1
             if rp.risk_level == 'Low':
                 summary['low'] += 1

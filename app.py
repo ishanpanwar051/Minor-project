@@ -351,6 +351,16 @@ def create_initial_data():
             print("Created sample students with data")
         
         db.session.commit()
+
+        if os.environ.get('EDUGUARD_DEMO_DATA', 'true').lower() != 'false':
+            try:
+                from demo_data import ensure_demo_data
+                ensure_demo_data()
+                print("Demo dashboard data synchronized")
+            except Exception as demo_exc:
+                print(f"Error creating demo dashboard data: {demo_exc}")
+                db.session.rollback()
+
         print("Initial data created successfully")
         
         print("\nLOGIN CREDENTIALS:")

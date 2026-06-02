@@ -194,22 +194,25 @@ class RiskProfile(db.Model):
         if self.social_isolation: personal_risk += 10
         personal_risk += max(0, (10 - (self.mental_wellbeing_score or 10))) * 2
         personal_risk = min(40, personal_risk)
-        self.risk_score = academic_risk + attendance_risk + personal_risk
+        self.risk_score = min(100, academic_risk + attendance_risk + personal_risk)
         
         reasons = []
         if (self.attendance_rate or 0) < 75: reasons.append('Low attendance (<75%)')
+        if (self.academic_performance or 0) < 60: reasons.append('Academic performance needs improvement')
         if (self.academic_performance or 0) < 40: reasons.append('Poor marks (<40)')
         if self.financial_issues: reasons.append('Financial condition: Low')
         if self.family_problems: reasons.append('Family pressure: High')
         if self.health_issues: reasons.append('Health issue present')
+        if self.social_isolation: reasons.append('Social isolation risk')
         if (self.mental_wellbeing_score or 10) <= 4: reasons.append('High mental stress')
         self.risk_reasons = ', '.join(reasons) if reasons else 'No significant risk factors detected'
         
-        personal_flags = sum([1 if f else 0 for f in [self.financial_issues, self.family_problems, self.health_issues, self.social_isolation, (self.mental_wellbeing_score or 10) <= 4]])
-        if ((self.attendance_rate or 0) < 60) or ((self.academic_performance or 0) < 30):
-            self.risk_level = 'Critical' if personal_flags >= 2 else 'High'
-        elif personal_flags >= 3:
+        if self.risk_score >= 75:
+            self.risk_level = 'Critical'
+        elif self.risk_score >= 55:
             self.risk_level = 'High'
+        elif self.risk_score >= 30:
+            self.risk_level = 'Medium'
         else:
             self.risk_level = 'Low'
 
