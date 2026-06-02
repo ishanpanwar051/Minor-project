@@ -78,9 +78,10 @@ def _ensure_admin_dashboard_data():
     try:
         if os.environ.get('EDUGUARD_DEMO_DATA', 'true').lower() == 'false':
             return
-        has_scholarship_data = Scholarship.query.count() and ScholarshipApplication.query.count()
+        has_enough_students = Student.query.count() >= 80
+        has_scholarship_data = Scholarship.query.count() >= 4 and ScholarshipApplication.query.count() >= 40
         has_real_risk = RiskProfile.query.filter(RiskProfile.risk_score > 0).count()
-        if not has_scholarship_data or not has_real_risk:
+        if not has_enough_students or not has_scholarship_data or not has_real_risk:
             from demo_data import ensure_demo_data
             ensure_demo_data()
     except Exception as exc:

@@ -106,6 +106,107 @@ DEMO_STUDENTS = [
 ]
 
 
+GENERATED_FIRST_NAMES = [
+    "Aarav", "Vivaan", "Aditya", "Ishaan", "Kabir", "Arjun", "Riya", "Ananya",
+    "Diya", "Meera", "Kavya", "Nisha", "Priya", "Neha", "Rahul", "Aman",
+    "Yash", "Kunal", "Sakshi", "Isha", "Tanvi", "Mohit", "Naman", "Tanya",
+    "Dev", "Harsh", "Kartik", "Palak", "Simran", "Varun",
+]
+
+GENERATED_LAST_NAMES = [
+    "Sharma", "Patel", "Gupta", "Singh", "Yadav", "Mehta", "Jain", "Khan",
+    "Verma", "Joshi", "Mishra", "Rathore", "Choudhary", "Malviya", "Panwar",
+]
+
+GENERATED_DEPARTMENTS = [
+    "Computer Science",
+    "Engineering",
+    "Business",
+    "Arts",
+    "Science",
+    "Information Technology",
+    "Data Science",
+    "Commerce",
+]
+
+
+def generated_student_rows(total=80):
+    rows = list(DEMO_STUDENTS)
+    for number in range(len(DEMO_STUDENTS) + 1, total + 1):
+        first = GENERATED_FIRST_NAMES[(number - 1) % len(GENERATED_FIRST_NAMES)]
+        last = GENERATED_LAST_NAMES[(number * 2) % len(GENERATED_LAST_NAMES)]
+        department = GENERATED_DEPARTMENTS[(number - 1) % len(GENERATED_DEPARTMENTS)]
+
+        if number % 11 == 0:
+            gpa = 4.1
+            attendance = 32
+            financial = True
+            family = True
+            health = True
+            isolation = True
+            wellbeing = 3
+            need = "High"
+            income = 160000
+        elif number % 7 == 0:
+            gpa = 5.2
+            attendance = 55
+            financial = True
+            family = number % 14 == 0
+            health = False
+            isolation = True
+            wellbeing = 4
+            need = "High"
+            income = 220000
+        elif number % 5 == 0:
+            gpa = 6.3
+            attendance = 68
+            financial = number % 10 == 0
+            family = True
+            health = False
+            isolation = False
+            wellbeing = 6
+            need = "Medium"
+            income = 420000
+        elif number % 3 == 0:
+            gpa = 7.2
+            attendance = 78
+            financial = False
+            family = False
+            health = False
+            isolation = False
+            wellbeing = 7
+            need = "Medium"
+            income = 600000
+        else:
+            gpa = 8.1 + ((number % 5) * 0.2)
+            attendance = 86 + (number % 9)
+            financial = False
+            family = False
+            health = False
+            isolation = False
+            wellbeing = 8 + (number % 3)
+            need = "Low"
+            income = 850000
+
+        rows.append({
+            "student_id": f"ST{number:03d}",
+            "first_name": first,
+            "last_name": last,
+            "email": f"student{number:03d}@eduguard.edu",
+            "department": department,
+            "gpa": round(gpa, 1),
+            "attendance_rate": attendance,
+            "financial_issues": financial,
+            "family_problems": family,
+            "health_issues": health,
+            "social_isolation": isolation,
+            "mental_wellbeing_score": wellbeing,
+            "annual_income": income,
+            "financial_need_level": need,
+        })
+    return rows
+
+
 DEMO_SCHOLARSHIPS = [
     {
         "title": "Merit Excellence Grant",
@@ -352,11 +453,11 @@ def _ensure_counselling_request(student, status, priority, topic, days_ago, coun
     return request_row
 
 
-def ensure_demo_data():
+def ensure_demo_data(total_students=80):
     admin = _ensure_user("admin@eduguard.edu", "admin", "admin", "admin123")
     faculty = _ensure_user("faculty@eduguard.edu", "faculty", "faculty", "faculty123")
 
-    students = {row["student_id"]: _ensure_demo_student(row) for row in DEMO_STUDENTS}
+    students = {row["student_id"]: _ensure_demo_student(row) for row in generated_student_rows(total_students)}
     scholarships = {
         row["title"]: _ensure_scholarship(row, admin.id)
         for row in DEMO_SCHOLARSHIPS
@@ -372,6 +473,41 @@ def ensure_demo_data():
     ]
     for student_id, title, status, days_ago, probability in application_specs:
         _ensure_application(students[student_id], scholarships[title], status, days_ago, probability)
+
+    scholarship_cycle = list(scholarships.values())
+    status_cycle = [
+        ApplicationStatus.PENDING,
+        ApplicationStatus.APPROVED,
+        ApplicationStatus.UNDER_REVIEW,
+        ApplicationStatus.REJECTED,
+    ]
+    for index, student in enumerate(students.values(), start=1):
+        primary = scholarship_cycle[index % len(scholarship_cycle)]
+        status = status_cycle[index % len(status_cycle)]
+        risk_profile = student.risk_profile
+        base_probability = 0.82
+        if risk_profile and risk_profile.risk_level == "Critical":
+            base_probability = 0.35
+        elif risk_profile and risk_profile.risk_level == "High":
+            base_probability = 0.52
+        elif risk_profile and risk_profile.risk_level == "Medium":
+            base_probability = 0.66
+        _ensure_application(
+            student,
+            primary,
+            status,
+            days_ago=(index % 26) + 1,
+            success_probability=min(0.95, base_probability + ((index % 5) * 0.02)),
+        )
+        if index % 4 == 0:
+            secondary = scholarship_cycle[(index + 1) % len(scholarship_cycle)]
+            _ensure_application(
+                student,
+                secondary,
+                ApplicationStatus.PENDING if index % 8 == 0 else ApplicationStatus.APPROVED,
+                days_ago=(index % 18) + 2,
+                success_probability=min(0.9, base_probability + 0.08),
+            )
 
     _ensure_counselling_request(
         students["ST003"],
@@ -397,6 +533,25 @@ def ensure_demo_data():
         9,
         faculty,
     )
+
+    for index, student in enumerate(students.values(), start=1):
+        risk_profile = student.risk_profile
+        if not risk_profile or risk_profile.risk_level not in {"High", "Critical"}:
+            continue
+        if index % 3 == 0:
+            status = CounsellingStatus.REQUESTED
+        elif index % 3 == 1:
+            status = CounsellingStatus.SCHEDULED
+        else:
+            status = CounsellingStatus.COMPLETED
+        _ensure_counselling_request(
+            student,
+            status,
+            "urgent" if risk_profile.risk_level == "Critical" else "high",
+            f"{risk_profile.risk_level} risk intervention",
+            days_ago=(index % 12) + 1,
+            counsellor=faculty,
+        )
 
     for student in students.values():
         sync_student_risk_inputs(student)
